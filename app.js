@@ -667,6 +667,9 @@ const CONTRACT_ABI = [
 ];
 
 
+document.addEventListener('DOMContentLoaded', () => {
+    init();
+});
 
 async function init() {
     console.log("Initializing...");
@@ -836,4 +839,5 @@ function handleChipId() {
     }
 }
 
-window.addEventListener('load', init);
+
+
