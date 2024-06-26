@@ -712,7 +712,7 @@ async function init() {
             // Get the chip ID from the URL parameter
             const urlParams = new URLSearchParams(window.location.search);
             chipId = urlParams.get('chipId');
-            handleChipId();
+            await handleChipId();
         } catch (error) {
             console.error("Error initializing Web3 or contract:", error);
             updateStatus('Error initializing. Check console for details.');
@@ -737,7 +737,7 @@ async function connectWallet() {
             document.getElementById('disconnectWallet').style.display = 'block';
             document.getElementById('userSection').style.display = 'block';
             checkIfAdmin();
-            handleChipId();
+            await handleChipId();
             await checkNetwork(); // Check network after connecting wallet
         } catch (error) {
             console.error('Detailed error:', error);
@@ -860,27 +860,36 @@ async function mintNFT() {
     }
 }
 
-function updateStatus(message) {
-    console.log("Status update:", message);
-    const statusElement = document.getElementById('status');
-    if (statusElement) {
-        statusElement.textContent = message;
-    }
-}
-
-function handleChipId() {
+async function handleChipId() {
     const mintButton = document.getElementById('mintNFT');
     const mintMessage = document.getElementById('mintMessage');
     if (chipId) {
-        document.getElementById('chipIdDisplay').textContent = chipId;
-        mintButton.classList.remove('disabled-button');
-        mintButton.disabled = false;
-        mintMessage.textContent = '';
+        // Check if the chip ID has already been minted
+        const tokenId = await contract.methods.chipToTokenId(chipId).call();
+        if (tokenId && tokenId !== '0') {
+            document.getElementById('invitationTitle').textContent = 'ID ALREADY MINTED';
+            mintButton.classList.add('disabled-button');
+            mintButton.disabled = true;
+            mintMessage.textContent = 'This chip ID has already been minted.';
+        } else {
+            document.getElementById('chipIdDisplay').textContent = chipId;
+            mintButton.classList.remove('disabled-button');
+            mintButton.disabled = false;
+            mintMessage.textContent = '';
+        }
     } else {
         document.getElementById('invitationTitle').textContent = 'YOU WERE NOT INVITED';
         mintButton.classList.add('disabled-button');
         mintButton.disabled = true;
         mintMessage.textContent = 'You have not tapped in';
+    }
+}
+
+function updateStatus(message) {
+    console.log("Status update:", message);
+    const statusElement = document.getElementById('status');
+    if (statusElement) {
+        statusElement.textContent = message;
     }
 }
 
