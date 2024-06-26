@@ -667,27 +667,9 @@ const CONTRACT_ABI = [
 ];
 
 
-const BASE_SEPOLIA_CHAIN_ID = '0xaa36a7'; // Replace with the actual chain ID for Base Sepolia
-const BASE_SEPOLIA_PARAMS = {
-    chainId: BASE_SEPOLIA_CHAIN_ID,
-    chainName: 'Base Sepolia',
-    nativeCurrency: {
-        name: 'Sepolia ETH',
-        symbol: 'SEPETH',
-        decimals: 18
-    },
-    rpcUrls: ['https://rpc.sepolia.org'], // Replace with the actual RPC URL for Base Sepolia
-    blockExplorerUrls: ['https://sepolia.etherscan.io'] // Replace with the actual block explorer URL for Base Sepolia
-};
-
-window.onload = init;
 
 async function init() {
     console.log("Initializing...");
-
-    // Clear the user account from local storage on page load
-    localStorage.removeItem('userAccount');
-
     if (typeof window.ethereum !== 'undefined') {
         console.log("Ethereum object found");
         try {
@@ -712,88 +694,102 @@ async function init() {
             const networkId = await web3.eth.net.getId();
             console.log("Connected to network ID:", networkId);
 
+            // Check if connected to Base Sepolia
+            if (networkId === '84532') {
+                console.log("Connected to Base Sepolia");
+                // Update UI or perform actions specific to Base Sepolia
+            } else {
+                console.log("Not connected to Base Sepolia");
+
+                // Provide option to add Base Sepolia to wallet
+                const addSepoliaButton = document.createElement('button');
+                addSepoliaButton.textContent = 'Add Base Sepolia';
+                addSepoliaButton.addEventListener('click', async () => {
+                    try {
+                        await ethereum.request({
+                            method: 'wallet_addEthereumChain',
+                            params: [{
+                                chainId: '0x14cc81', // Chain ID in hex (84532 in decimal)
+                                chainName: 'Base Sepolia',
+                                rpcUrls: ['https://sepolia.base.org'],
+                                nativeCurrency: {
+                                    name: 'ETH',
+                                    symbol: 'ETH',
+                                    decimals: 18,
+                                },
+                                blockExplorerUrls: ['https://sepolia-explorer.base.org'],
+                            }],
+                        });
+                        console.log("Base Sepolia added to wallet");
+                    } catch (error) {
+                        console.error("Error adding Base Sepolia:", error);
+                    }
+                });
+                document.body.appendChild(addSepoliaButton);
+            }
+
             document.getElementById('connectWallet').addEventListener('click', connectWallet);
             document.getElementById('disconnectWallet').addEventListener('click', disconnectWallet);
             document.getElementById('registerChip').addEventListener('click', registerChip);
             document.getElementById('mintNFT').addEventListener('click', mintNFT);
-            document.getElementById('addBaseSepolia').addEventListener('click', addBaseSepoliaNetwork);
 
             // Get the chip ID from the URL parameter
             const urlParams = new URLSearchParams(window.location.search);
             chipId = urlParams.get('chipId');
-            handleChipId();
-
-            // Check if the user is connected to Base Sepolia
-            checkNetwork();
+            if (chipId) {
+                document.getElementById('chipIdDisplay').textContent = chipId;
+                console.log("Chip ID detected:", chipId);
+            } else {
+                updateStatus('You have not tapped in.');
+                console.log("No chip ID in URL");
+            }
         } catch (error) {
             console.error("Error initializing Web3 or contract:", error);
-            updateStatus('Error initializing Check console for details');
+            updateStatus('Error initializing. Check console for details.');
         }
     } else {
         console.log("No Ethereum object found");
-        updateStatus('Please install MetaMask');
-    }
-}
-
-async function checkNetwork() {
-    const networkId = await web3.eth.net.getId();
-    if (networkId !== parseInt(BASE_SEPOLIA_CHAIN_ID, 16)) {
-        updateStatus('Please switch to the Base Sepolia network');
-        document.getElementById('addBaseSepolia').style.display = 'block';
-    }
-}
-
-async function addBaseSepoliaNetwork() {
-    try {
-        await window.ethereum.request({
-            method: 'wallet_addEthereumChain',
-            params: [BASE_SEPOLIA_PARAMS]
-        });
-        updateStatus('Base Sepolia network added, please switch to it');
-        checkNetwork();
-    } catch (error) {
-        updateStatus('Failed to add Base Sepolia network: ' + error.message);
+        updateStatus('Please install MetaMask!');
     }
 }
 
 async function connectWallet() {
     console.log("Attempting to connect wallet...");
-    updateStatus('Connecting wallet...');
     if (typeof window.ethereum !== 'undefined') {
         try {
+            // This line prompts the user to connect their wallet
             const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
             userAccount = accounts[0];
-            localStorage.setItem('userAccount', userAccount); // Save user account to local storage
             console.log("Wallet connected:", userAccount);
             updateStatus('Wallet connected: ' + userAccount);
-            document.getElementById('connectWallet').style.display = 'none';
-            document.getElementById('disconnectWallet').style.display = 'block';
             document.getElementById('userSection').style.display = 'block';
             checkIfAdmin();
-            handleChipId();
         } catch (error) {
             console.error('Detailed error:', error);
             updateStatus('Failed to connect wallet: ' + error.message);
         }
     } else {
-        updateStatus('MetaMask is not installed Please install it to connect your wallet');
+        updateStatus('MetaMask is not installed. Please install it to connect your wallet.');
     }
 }
 
-function disconnectWallet() {
-    console.log("Disconnecting wallet...");
-    updateStatus('Wallet disconnected');
-    userAccount = null;
-    localStorage.removeItem('userAccount');
-    document.getElementById('connectWallet').style.display = 'block';
-    document.getElementById('disconnectWallet').style.display = 'none';
-    document.getElementById('userSection').style.display = 'none';
-    document.getElementById('adminSection').style.display = 'none';
+async function disconnectWallet() {
+    try {
+        await ethereum.request({ method: 'wallet_requestPermissions', params: [{ eth_accounts: {} }] });
+        console.log("Wallet disconnected");
+        updateStatus('Wallet disconnected.');
+        document.getElementById('userSection').style.display = 'none';
+        document.getElementById('connectWallet').style.display = 'block';
+    } catch (error) {
+        console.error('Error disconnecting wallet:', error);
+        updateStatus('Failed to disconnect wallet: ' + error.message);
+    }
 }
 
 async function checkIfAdmin() {
     console.log("Checking if user is admin...");
     try {
+        // Check if the owner function exists
         if (contract.methods.owner) {
             const owner = await contract.methods.owner().call();
             console.log("Contract owner:", owner);
@@ -814,12 +810,11 @@ async function checkIfAdmin() {
 
 async function registerChip() {
     console.log("Attempting to register chip...");
-    updateStatus('Registering chip...');
     const chipIdToRegister = document.getElementById('chipIdRegister').value;
     try {
         await contract.methods.registerChip(chipIdToRegister).send({ from: userAccount });
         console.log("Chip registered successfully");
-        updateStatus('Chip registered successfully');
+        updateStatus('Chip registered successfully!');
     } catch (error) {
         console.error("Error registering chip:", error);
         updateStatus('Failed to register chip: ' + error.message);
@@ -828,11 +823,9 @@ async function registerChip() {
 
 async function mintNFT() {
     console.log("Attempting to mint NFT...");
-    updateStatus('Minting NFT...');
     if (!chipId) {
         console.log("No chip ID available");
-        document.getElementById('invitationTitle').textContent = 'YOU WERE NOT INVITED';
-        updateStatus('You have not tapped in');
+        updateStatus('You have not tapped in.');
         return;
     }
     try {
@@ -841,7 +834,7 @@ async function mintNFT() {
         if (contract.methods.mintNFT) {
             await contract.methods.mintNFT(chipId).send({ from: userAccount });
             console.log("NFT minted successfully");
-            updateStatus('NFT minted successfully');
+            updateStatus('NFT minted successfully!');
         } else {
             throw new Error("mintNFT function not found in the contract");
         }
@@ -853,24 +846,7 @@ async function mintNFT() {
 
 function updateStatus(message) {
     console.log("Status update:", message);
-    const statusElement = document.getElementById('status');
-    if (statusElement) {
-        statusElement.textContent = message;
-    }
+    document.getElementById('status').textContent = message;
 }
 
-function handleChipId() {
-    const mintButton = document.getElementById('mintNFT');
-    const mintMessage = document.getElementById('mintMessage');
-    if (chipId) {
-        document.getElementById('chipIdDisplay').textContent = chipId;
-        mintButton.classList.remove('disabled-button');
-        mintButton.disabled = false;
-        mintMessage.textContent = '';
-    } else {
-        document.getElementById('invitationTitle').textContent = 'YOU WERE NOT INVITED';
-        mintButton.classList.add('disabled-button');
-        mintButton.disabled = true;
-        mintMessage.textContent = 'You have not tapped in';
-    }
-}
+window.addEventListener('load', init);
