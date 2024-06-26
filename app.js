@@ -668,7 +668,6 @@ const CONTRACT_ABI = [
 
 
 
-
 const BASE_SEPOLIA_CHAIN_ID = '84532'; // Chain ID for Base Sepolia
 const BASE_SEPOLIA_PARAMS = {
     chainId: '0x14CC4', // Chain ID in hex (84532 in decimal)
@@ -685,26 +684,20 @@ const BASE_SEPOLIA_PARAMS = {
 async function init() {
     console.log("Initializing...");
     if (window.ethereum) {
-        try {
-            web3 = new Web3(window.ethereum);
-            console.log("Web3 initialized with window.ethereum");
+        web3 = new Web3(window.ethereum);
+        console.log("Web3 initialized with window.ethereum");
 
-            document.getElementById('connectWallet').addEventListener('click', connectWallet);
-            document.getElementById('disconnectWallet').addEventListener('click', disconnectWallet);
-            document.getElementById('registerChip').addEventListener('click', registerChip);
-            document.getElementById('mintNFT').addEventListener('click', mintNFT);
-            document.getElementById('addBaseSepolia').addEventListener('click', addBaseSepoliaNetwork);
+        document.getElementById('connectWallet').addEventListener('click', connectWallet);
+        document.getElementById('disconnectWallet').addEventListener('click', disconnectWallet);
+        document.getElementById('registerChip').addEventListener('click', registerChip);
+        document.getElementById('mintNFT').addEventListener('click', mintNFT);
+        document.getElementById('addBaseSepolia').addEventListener('click', addBaseSepoliaNetwork);
 
-            // Get the chip ID from the URL parameter
-            const urlParams = new URLSearchParams(window.location.search);
-            chipId = urlParams.get('chipId');
-            handleChipId();
-        } catch (error) {
-            console.error("Error initializing Web3:", error);
-            updateStatus('Error initializing. Check console for details.');
-        }
+        // Get the chip ID from the URL parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        chipId = urlParams.get('chipId');
+        handleChipId();
     } else {
-        console.log("No Ethereum object found");
         updateStatus('Please install MetaMask or another compatible wallet!');
     }
 }
@@ -722,8 +715,6 @@ async function connectWallet() {
             document.getElementById('connectWallet').style.display = 'none';
             document.getElementById('disconnectWallet').style.display = 'block';
             document.getElementById('userSection').style.display = 'block';
-            checkIfAdmin();
-            await handleChipId();
             await checkNetwork(); // Check network after connecting wallet
         } catch (error) {
             console.error('Failed to connect wallet:', error);
@@ -790,7 +781,7 @@ async function addBaseSepoliaNetwork() {
 
 async function initializeContract() {
     try {
-        console.log("Contract Address:", CONTRACT_ADDRESS);
+        console.log("Initializing contract...");
         contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
         console.log("Contract object created:", contract);
 
@@ -804,17 +795,16 @@ async function initializeContract() {
         } catch (error) {
             console.error("Error calling totalSupply:", error);
         }
-
     } catch (error) {
-        console.error("Error initializing Web3 or contract:", error);
-        updateStatus('Error initializing. Check console for details.');
+        console.error("Error initializing contract:", error);
+        updateStatus('Error initializing contract. Check console for details.');
     }
 }
 
 async function checkIfAdmin() {
     console.log("Checking if user is admin...");
     try {
-        if (contract.methods.owner) {
+        if (contract && contract.methods.owner) {
             const owner = await contract.methods.owner().call();
             console.log("Contract owner:", owner);
             console.log("Current user:", userAccount);
@@ -870,15 +860,10 @@ async function mintNFT() {
             return;
         }
 
-        console.log("Contract methods:", Object.keys(contract.methods));
         console.log("Minting with chip ID:", chipId);
-        if (contract.methods.mintNFT) {
-            await contract.methods.mintNFT(chipId).send({ from: userAccount });
-            console.log("NFT minted successfully");
-            updateStatus('NFT minted successfully');
-        } else {
-            throw new Error("mintNFT function not found in the contract");
-        }
+        await contract.methods.mintNFT(chipId).send({ from: userAccount });
+        console.log("NFT minted successfully");
+        updateStatus('NFT minted successfully');
     } catch (error) {
         console.error("Error minting NFT:", error);
         updateStatus('Failed to mint NFT: ' + error.message);
