@@ -695,6 +695,7 @@ async function init() {
             document.getElementById('connectWallet').addEventListener('click', connectWallet);
             document.getElementById('registerChip').addEventListener('click', registerChip);
             document.getElementById('mintNFT').addEventListener('click', mintNFT);
+            document.getElementById('manualConnect').addEventListener('click', openWalletApp);
 
             // Get the chip ID from the URL parameter
             const urlParams = new URLSearchParams(window.location.search);
@@ -791,6 +792,33 @@ async function mintNFT() {
     } catch (error) {
         console.error("Error minting NFT:", error);
         updateStatus('Failed to mint NFT: ' + error.message);
+    }
+}
+
+function openWalletApp() {
+    let walletLink = '';
+
+    // Check if MetaMask is installed
+    if (window.ethereum && window.ethereum.isMetaMask) {
+        walletLink = 'metamask://';
+    } 
+    // Check if Coinbase Wallet is installed
+    else if (window.ethereum && window.ethereum.isCoinbaseWallet) {
+        walletLink = 'coinbase://';
+    } 
+    // Check if WalletConnect is supported (example for WalletConnect deep link)
+    else if (window.WalletConnect) {
+        walletLink = 'wc://';
+    } 
+    // Check if Trust Wallet is installed
+    else if (navigator.userAgent.includes("TrustWallet")) {
+        walletLink = 'trust://';
+    }
+
+    if (walletLink) {
+        window.location.href = walletLink;
+    } else {
+        updateStatus('No supported wallet app found. Please install MetaMask, Coinbase Wallet, Trust Wallet, or use WalletConnect.');
     }
 }
 
