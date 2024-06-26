@@ -837,6 +837,14 @@ async function mintNFT() {
         return;
     }
     try {
+        // Check if the chip ID has already been minted
+        const tokenId = await contract.methods.chipToTokenId(chipId).call();
+        if (tokenId && tokenId !== '0') {
+            console.log("Chip ID already minted");
+            updateStatus('Chip ID already minted');
+            return;
+        }
+
         console.log("Contract methods:", Object.keys(contract.methods));
         console.log("Minting with chip ID:", chipId);
         if (contract.methods.mintNFT) {
