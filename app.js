@@ -666,174 +666,175 @@ const CONTRACT_ABI = [
 	}
 ];
 
-window.onload = init
+
+window.onload = init;
 
 async function init() {
-    console.log("Initializing...")
+    console.log("Initializing...");
 
     // Clear the user account from local storage on page load
-    localStorage.removeItem('userAccount')
+    localStorage.removeItem('userAccount');
 
     if (typeof window.ethereum !== 'undefined') {
-        console.log("Ethereum object found")
+        console.log("Ethereum object found");
         try {
-            web3 = new Web3(window.ethereum)
-            console.log("Web3 initialized")
+            web3 = new Web3(window.ethereum);
+            console.log("Web3 initialized");
 
-            console.log("Contract Address:", CONTRACT_ADDRESS)
-            contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS)
-            console.log("Contract object created:", contract)
+            console.log("Contract Address:", CONTRACT_ADDRESS);
+            contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
+            console.log("Contract object created:", contract);
 
             // Log available methods
-            console.log("Available contract methods:", Object.keys(contract.methods))
+            console.log("Available contract methods:", Object.keys(contract.methods));
 
             // Try to call a view function
             try {
-                const totalSupply = await contract.methods.totalSupply().call()
-                console.log("Total supply:", totalSupply)
+                const totalSupply = await contract.methods.totalSupply().call();
+                console.log("Total supply:", totalSupply);
             } catch (error) {
-                console.error("Error calling totalSupply:", error)
+                console.error("Error calling totalSupply:", error);
             }
 
-            const networkId = await web3.eth.net.getId()
-            console.log("Connected to network ID:", networkId)
+            const networkId = await web3.eth.net.getId();
+            console.log("Connected to network ID:", networkId);
 
-            document.getElementById('connectWallet').addEventListener('click', connectWallet)
-            document.getElementById('disconnectWallet').addEventListener('click', disconnectWallet)
-            document.getElementById('registerChip').addEventListener('click', registerChip)
-            document.getElementById('mintNFT').addEventListener('click', mintNFT)
+            document.getElementById('connectWallet').addEventListener('click', connectWallet);
+            document.getElementById('disconnectWallet').addEventListener('click', disconnectWallet);
+            document.getElementById('registerChip').addEventListener('click', registerChip);
+            document.getElementById('mintNFT').addEventListener('click', mintNFT);
 
             // Get the chip ID from the URL parameter
-            const urlParams = new URLSearchParams(window.location.search)
-            chipId = urlParams.get('chipId')
-            handleChipId()
+            const urlParams = new URLSearchParams(window.location.search);
+            chipId = urlParams.get('chipId');
+            handleChipId();
         } catch (error) {
-            console.error("Error initializing Web3 or contract:", error)
-            updateStatus('Error initializing Check console for details')
+            console.error("Error initializing Web3 or contract:", error);
+            updateStatus('Error initializing Check console for details');
         }
     } else {
-        console.log("No Ethereum object found")
-        updateStatus('Please install MetaMask')
+        console.log("No Ethereum object found");
+        updateStatus('Please install MetaMask');
     }
 }
 
 async function connectWallet() {
-    console.log("Attempting to connect wallet...")
-    updateStatus('Connecting wallet...')
+    console.log("Attempting to connect wallet...");
+    updateStatus('Connecting wallet...');
     if (typeof window.ethereum !== 'undefined') {
         try {
             // This line prompts the user to connect their wallet
-            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
-            userAccount = accounts[0]
-            localStorage.setItem('userAccount', userAccount) // Save user account to local storage
-            console.log("Wallet connected:", userAccount)
-            updateStatus('Wallet connected: ' + userAccount)
-            document.getElementById('connectWallet').style.display = 'none'
-            document.getElementById('disconnectWallet').style.display = 'block'
-            document.getElementById('userSection').style.display = 'block'
-            checkIfAdmin()
-            handleChipId()
+            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+            userAccount = accounts[0];
+            localStorage.setItem('userAccount', userAccount); // Save user account to local storage
+            console.log("Wallet connected:", userAccount);
+            updateStatus('Wallet connected: ' + userAccount);
+            document.getElementById('connectWallet').style.display = 'none';
+            document.getElementById('disconnectWallet').style.display = 'block';
+            document.getElementById('userSection').style.display = 'block';
+            checkIfAdmin();
+            handleChipId();
         } catch (error) {
-            console.error('Detailed error:', error)
-            updateStatus('Failed to connect wallet: ' + error.message)
+            console.error('Detailed error:', error);
+            updateStatus('Failed to connect wallet: ' + error.message);
         }
     } else {
-        updateStatus('MetaMask is not installed Please install it to connect your wallet')
+        updateStatus('MetaMask is not installed Please install it to connect your wallet');
     }
 }
 
 function disconnectWallet() {
-    console.log("Disconnecting wallet...")
-    updateStatus('Wallet disconnected')
-    userAccount = null
-    localStorage.removeItem('userAccount')
-    document.getElementById('connectWallet').style.display = 'block'
-    document.getElementById('disconnectWallet').style.display = 'none'
-    document.getElementById('userSection').style.display = 'none'
-    document.getElementById('adminSection').style.display = 'none'
+    console.log("Disconnecting wallet...");
+    updateStatus('Wallet disconnected');
+    userAccount = null;
+    localStorage.removeItem('userAccount');
+    document.getElementById('connectWallet').style.display = 'block';
+    document.getElementById('disconnectWallet').style.display = 'none';
+    document.getElementById('userSection').style.display = 'none';
+    document.getElementById('adminSection').style.display = 'none';
 }
 
 async function checkIfAdmin() {
-    console.log("Checking if user is admin...")
+    console.log("Checking if user is admin...");
     try {
         // Check if the owner function exists
         if (contract.methods.owner) {
-            const owner = await contract.methods.owner().call()
-            console.log("Contract owner:", owner)
-            console.log("Current user:", userAccount)
+            const owner = await contract.methods.owner().call();
+            console.log("Contract owner:", owner);
+            console.log("Current user:", userAccount);
             if (userAccount.toLowerCase() === owner.toLowerCase()) {
-                console.log("User is admin")
-                document.getElementById('adminSection').style.display = 'block'
+                console.log("User is admin");
+                document.getElementById('adminSection').style.display = 'block';
             } else {
-                console.log("User is not admin")
+                console.log("User is not admin");
             }
         } else {
-            console.log("Owner function not found in the contract")
+            console.log("Owner function not found in the contract");
         }
     } catch (error) {
-        console.error("Error checking admin status:", error)
+        console.error("Error checking admin status:", error);
     }
 }
 
 async function registerChip() {
-    console.log("Attempting to register chip...")
-    updateStatus('Registering chip...')
-    const chipIdToRegister = document.getElementById('chipIdRegister').value
+    console.log("Attempting to register chip...");
+    updateStatus('Registering chip...');
+    const chipIdToRegister = document.getElementById('chipIdRegister').value;
     try {
-        await contract.methods.registerChip(chipIdToRegister).send({ from: userAccount })
-        console.log("Chip registered successfully")
-        updateStatus('Chip registered successfully')
+        await contract.methods.registerChip(chipIdToRegister).send({ from: userAccount });
+        console.log("Chip registered successfully");
+        updateStatus('Chip registered successfully');
     } catch (error) {
-        console.error("Error registering chip:", error)
-        updateStatus('Failed to register chip: ' + error.message)
+        console.error("Error registering chip:", error);
+        updateStatus('Failed to register chip: ' + error.message);
     }
 }
 
 async function mintNFT() {
-    console.log("Attempting to mint NFT...")
-    updateStatus('Minting NFT...')
+    console.log("Attempting to mint NFT...");
+    updateStatus('Minting NFT...');
     if (!chipId) {
-        console.log("No chip ID available")
-        document.getElementById('invitationTitle').textContent = 'YOU WERE NOT INVITED'
-        updateStatus('You have not tapped in')
-        return
+        console.log("No chip ID available");
+        document.getElementById('invitationTitle').textContent = 'YOU WERE NOT INVITED';
+        updateStatus('You have not tapped in');
+        return;
     }
     try {
-        console.log("Contract methods:", Object.keys(contract.methods))
-        console.log("Minting with chip ID:", chipId)
+        console.log("Contract methods:", Object.keys(contract.methods));
+        console.log("Minting with chip ID:", chipId);
         if (contract.methods.mintNFT) {
-            await contract.methods.mintNFT(chipId).send({ from: userAccount })
-            console.log("NFT minted successfully")
-            updateStatus('NFT minted successfully')
+            await contract.methods.mintNFT(chipId).send({ from: userAccount });
+            console.log("NFT minted successfully");
+            updateStatus('NFT minted successfully');
         } else {
-            throw new Error("mintNFT function not found in the contract")
+            throw new Error("mintNFT function not found in the contract");
         }
     } catch (error) {
-        console.error("Error minting NFT:", error)
-        updateStatus('Failed to mint NFT: ' + error.message)
+        console.error("Error minting NFT:", error);
+        updateStatus('Failed to mint NFT: ' + error.message);
     }
 }
 
 function updateStatus(message) {
-    console.log("Status update:", message)
-    const statusElement = document.getElementById('status')
+    console.log("Status update:", message);
+    const statusElement = document.getElementById('status');
     if (statusElement) {
-        statusElement.textContent = message
+        statusElement.textContent = message;
     }
 }
 
 function handleChipId() {
-    const mintButton = document.getElementById('mintNFT')
-    const mintMessage = document.getElementById('mintMessage')
+    const mintButton = document.getElementById('mintNFT');
+    const mintMessage = document.getElementById('mintMessage');
     if (chipId) {
-        document.getElementById('chipIdDisplay').textContent = chipId
-        mintButton.classList.remove('disabled-button')
-        mintButton.disabled = false
-        mintMessage.textContent = ''
+        document.getElementById('chipIdDisplay').textContent = chipId;
+        mintButton.classList.remove('disabled-button');
+        mintButton.disabled = false;
+        mintMessage.textContent = '';
     } else {
-        document.getElementById('invitationTitle').textContent = 'YOU WERE NOT INVITED'
-        mintButton.classList.add('disabled-button')
-        mintButton.disabled = true
-        mintMessage.textContent = 'You have not tapped in'
+        document.getElementById('invitationTitle').textContent = 'YOU WERE NOT INVITED';
+        mintButton.classList.add('disabled-button');
+        mintButton.disabled = true;
+        mintMessage.textContent = 'You have not tapped in';
     }
 }
