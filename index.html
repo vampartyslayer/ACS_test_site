@@ -72,6 +72,10 @@
         .chip-id-display {
             font-weight: bold;
         }
+        .disabled-button {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
         @media (max-width: 768px) {
             .container {
                 padding: 20px;
@@ -115,6 +119,7 @@
             <h2>Mint Your NFT</h2>
             <p>Chip ID: <span id="chipIdDisplay" class="chip-id-display"></span></p>
             <button id="mintNFT">Mint NFT</button>
+            <p id="mintMessage"></p>
         </div>
 
         <p id="status"></p>
