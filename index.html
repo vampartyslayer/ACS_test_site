@@ -3,51 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome</title>
+    <title>Welcome to the Future</title>
     <script src="https://cdn.jsdelivr.net/npm/web3@1.5.2/dist/web3.min.js"></script>
     <style>
         body {
             font-family: 'Helvetica Neue', Arial, sans-serif;
-            line-height: 1.6;
             margin: 0;
             padding: 0;
-            background: linear-gradient(to right, #232526, #414345);
-            color: #fff;
+            background: #f4f4f4;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
             text-align: center;
+            background: #000;
+            color: #fff;
         }
         .container {
-            max-width: 600px;
+            text-align: center;
+            max-width: 800px;
             padding: 40px;
-            background: rgba(0, 0, 0, 0.75);
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
         h1 {
-            font-size: 2.5em;
-            margin-bottom: 20px;
+            font-size: 4em;
+            margin: 0 0 20px;
             letter-spacing: 2px;
+            font-weight: 900;
         }
         p {
-            font-size: 1.2em;
-            margin: 20px 0;
+            font-size: 1.5em;
+            margin: 10px 0;
+            letter-spacing: 1px;
+            font-weight: 500;
         }
         button {
-            background-color: #333;
+            background-color: #fff;
             border: none;
-            color: white;
+            color: #000;
             padding: 15px 30px;
-            font-size: 16px;
-            margin: 10px 2px;
+            font-size: 1em;
+            margin: 20px 10px;
             cursor: pointer;
             border-radius: 5px;
+            font-weight: 700;
+            text-transform: uppercase;
             transition: background-color 0.3s;
         }
         button:hover {
-            background-color: #555;
+            background-color: #ddd;
         }
         .admin-section, .user-section {
             display: none;
@@ -57,22 +60,22 @@
             font-weight: bold;
         }
         .disabled-button {
-            background-color: #ccc;
+            background-color: #666;
             cursor: not-allowed;
         }
         @media (max-width: 768px) {
             .container {
                 padding: 20px;
             }
-            button {
-                padding: 10px 20px;
-                font-size: 14px;
-            }
             h1 {
-                font-size: 2em;
+                font-size: 2.5em;
             }
             p {
-                font-size: 1em;
+                font-size: 1.2em;
+            }
+            button {
+                padding: 10px 20px;
+                font-size: 0.9em;
             }
         }
         @media (max-width: 480px) {
@@ -80,26 +83,26 @@
                 width: 90%;
                 padding: 10px;
             }
-            button {
-                padding: 8px 16px;
-                font-size: 12px;
-            }
             h1 {
-                font-size: 1.5em;
+                font-size: 2em;
             }
             p {
-                font-size: 0.9em;
+                font-size: 1em;
+            }
+            button {
+                padding: 8px 16px;
+                font-size: 0.8em;
             }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Welcome.</h1>
-        <p>Experimentation makes ideas tangible</p>
-        <p>Innovation beats fear of failure</p>
-        <p>Nothing is perfect the first time</p>
-        <p>You are invited to join us</p>
+        <h1>YOU ARE INVITED</h1>
+        <p>Experimentation makes ideas tangible.</p>
+        <p>Innovation beats fear of failure.</p>
+        <p>Nothing is perfect the first time.</p>
+        <p>Join us.</p>
         <button id="connectWallet">Connect Wallet</button>
         <button id="manualConnect">Connect Wallet Manually</button>
 
