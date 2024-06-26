@@ -685,21 +685,27 @@ const BASE_SEPOLIA_PARAMS = {
 async function init() {
     console.log("Initializing...");
     if (window.ethereum) {
-        web3 = new Web3(window.ethereum);
-        console.log("Web3 initialized with window.ethereum");
+        try {
+            web3 = new Web3(window.ethereum);
+            console.log("Web3 initialized with window.ethereum");
 
-        document.getElementById('connectWallet').addEventListener('click', connectWallet);
-        document.getElementById('disconnectWallet').addEventListener('click', disconnectWallet);
-        document.getElementById('registerChip').addEventListener('click', registerChip);
-        document.getElementById('mintNFT').addEventListener('click', mintNFT);
-        document.getElementById('addBaseSepolia').addEventListener('click', addBaseSepoliaNetwork);
+            document.getElementById('connectWallet').addEventListener('click', connectWallet);
+            document.getElementById('disconnectWallet').addEventListener('click', disconnectWallet);
+            document.getElementById('registerChip').addEventListener('click', registerChip);
+            document.getElementById('mintNFT').addEventListener('click', mintNFT);
+            document.getElementById('addBaseSepolia').addEventListener('click', addBaseSepoliaNetwork);
 
-        // Get the chip ID from the URL parameter
-        const urlParams = new URLSearchParams(window.location.search);
-        chipId = urlParams.get('chipId');
-        handleChipId();
+            // Get the chip ID from the URL parameter
+            const urlParams = new URLSearchParams(window.location.search);
+            chipId = urlParams.get('chipId');
+            handleChipId();
+        } catch (error) {
+            console.error("Error initializing Web3:", error);
+            updateStatus('Error initializing. Check console for details.');
+        }
     } else {
-        updateStatus('Please install MetaMask!');
+        console.log("No Ethereum object found");
+        updateStatus('Please install MetaMask or another compatible wallet!');
     }
 }
 
@@ -720,11 +726,11 @@ async function connectWallet() {
             await handleChipId();
             await checkNetwork(); // Check network after connecting wallet
         } catch (error) {
-            console.error('Detailed error:', error);
+            console.error('Failed to connect wallet:', error);
             updateStatus('Failed to connect wallet: ' + error.message);
         }
     } else {
-        updateStatus('MetaMask is not installed. Please install it to connect your wallet.');
+        updateStatus('MetaMask or another compatible wallet is not installed. Please install it to connect your wallet.');
     }
 }
 
@@ -741,18 +747,23 @@ async function disconnectWallet() {
 }
 
 async function checkNetwork() {
-    const networkId = await web3.eth.net.getId();
-    console.log("Current network ID:", networkId);
-    const addBaseSepoliaButton = document.getElementById('addBaseSepolia');
-    if (parseInt(networkId, 10) !== parseInt(BASE_SEPOLIA_CHAIN_ID, 10)) {
-        updateStatus('Please switch to the Base Sepolia network');
-        addBaseSepoliaButton.textContent = 'Add Base Sepolia';
-        addBaseSepoliaButton.onclick = addBaseSepoliaNetwork;
-        showAddSepoliaOption();
-    } else {
-        updateStatus('Connected to Base Sepolia network');
-        addBaseSepoliaButton.style.display = 'none';
-        initializeContract(); // Initialize the contract only after network check
+    try {
+        const networkId = await web3.eth.net.getId();
+        console.log("Current network ID:", networkId);
+        const addBaseSepoliaButton = document.getElementById('addBaseSepolia');
+        if (parseInt(networkId, 10) !== parseInt(BASE_SEPOLIA_CHAIN_ID, 10)) {
+            updateStatus('Please switch to the Base Sepolia network');
+            addBaseSepoliaButton.textContent = 'Add Base Sepolia';
+            addBaseSepoliaButton.onclick = addBaseSepoliaNetwork;
+            showAddSepoliaOption();
+        } else {
+            updateStatus('Connected to Base Sepolia network');
+            addBaseSepoliaButton.style.display = 'none';
+            initializeContract(); // Initialize the contract only after network check
+        }
+    } catch (error) {
+        console.error('Error checking network:', error);
+        updateStatus('Error checking network: ' + error.message);
     }
 }
 
@@ -773,6 +784,7 @@ async function addBaseSepoliaNetwork() {
         await checkNetwork();
     } catch (error) {
         updateStatus('Failed to add Base Sepolia network: ' + error.message);
+        console.error('Error adding Base Sepolia network:', error);
     }
 }
 
