@@ -667,6 +667,19 @@ const CONTRACT_ABI = [
 ];
 
 
+const BASE_SEPOLIA_CHAIN_ID = '0xaa36a7'; // Replace with the actual chain ID for Base Sepolia
+const BASE_SEPOLIA_PARAMS = {
+    chainId: BASE_SEPOLIA_CHAIN_ID,
+    chainName: 'Base Sepolia',
+    nativeCurrency: {
+        name: 'Sepolia ETH',
+        symbol: 'SEPETH',
+        decimals: 18
+    },
+    rpcUrls: ['https://rpc.sepolia.org'], // Replace with the actual RPC URL for Base Sepolia
+    blockExplorerUrls: ['https://sepolia.etherscan.io'] // Replace with the actual block explorer URL for Base Sepolia
+};
+
 window.onload = init;
 
 async function init() {
@@ -703,11 +716,15 @@ async function init() {
             document.getElementById('disconnectWallet').addEventListener('click', disconnectWallet);
             document.getElementById('registerChip').addEventListener('click', registerChip);
             document.getElementById('mintNFT').addEventListener('click', mintNFT);
+            document.getElementById('addBaseSepolia').addEventListener('click', addBaseSepoliaNetwork);
 
             // Get the chip ID from the URL parameter
             const urlParams = new URLSearchParams(window.location.search);
             chipId = urlParams.get('chipId');
             handleChipId();
+
+            // Check if the user is connected to Base Sepolia
+            checkNetwork();
         } catch (error) {
             console.error("Error initializing Web3 or contract:", error);
             updateStatus('Error initializing Check console for details');
@@ -718,12 +735,32 @@ async function init() {
     }
 }
 
+async function checkNetwork() {
+    const networkId = await web3.eth.net.getId();
+    if (networkId !== parseInt(BASE_SEPOLIA_CHAIN_ID, 16)) {
+        updateStatus('Please switch to the Base Sepolia network');
+        document.getElementById('addBaseSepolia').style.display = 'block';
+    }
+}
+
+async function addBaseSepoliaNetwork() {
+    try {
+        await window.ethereum.request({
+            method: 'wallet_addEthereumChain',
+            params: [BASE_SEPOLIA_PARAMS]
+        });
+        updateStatus('Base Sepolia network added, please switch to it');
+        checkNetwork();
+    } catch (error) {
+        updateStatus('Failed to add Base Sepolia network: ' + error.message);
+    }
+}
+
 async function connectWallet() {
     console.log("Attempting to connect wallet...");
     updateStatus('Connecting wallet...');
     if (typeof window.ethereum !== 'undefined') {
         try {
-            // This line prompts the user to connect their wallet
             const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
             userAccount = accounts[0];
             localStorage.setItem('userAccount', userAccount); // Save user account to local storage
@@ -757,7 +794,6 @@ function disconnectWallet() {
 async function checkIfAdmin() {
     console.log("Checking if user is admin...");
     try {
-        // Check if the owner function exists
         if (contract.methods.owner) {
             const owner = await contract.methods.owner().call();
             console.log("Contract owner:", owner);
