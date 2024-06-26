@@ -668,6 +668,7 @@ const CONTRACT_ABI = [
 
 
 
+
 const BASE_SEPOLIA_CHAIN_ID = '84532'; // Chain ID for Base Sepolia
 const BASE_SEPOLIA_PARAMS = {
     chainId: '0x14CC4', // Chain ID in hex (84532 in decimal)
@@ -687,38 +688,16 @@ async function init() {
         web3 = new Web3(window.ethereum);
         console.log("Web3 initialized with window.ethereum");
 
-        try {
-            await window.ethereum.request({ method: 'eth_requestAccounts' });
+        document.getElementById('connectWallet').addEventListener('click', connectWallet);
+        document.getElementById('disconnectWallet').addEventListener('click', disconnectWallet);
+        document.getElementById('registerChip').addEventListener('click', registerChip);
+        document.getElementById('mintNFT').addEventListener('click', mintNFT);
+        document.getElementById('addBaseSepolia').addEventListener('click', addBaseSepoliaNetwork);
 
-            console.log("Contract Address:", CONTRACT_ADDRESS);
-            contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
-            console.log("Contract object created:", contract);
-
-            // Log available methods
-            console.log("Available contract methods:", Object.keys(contract.methods));
-
-            // Try to call a view function
-            try {
-                const totalSupply = await contract.methods.totalSupply().call();
-                console.log("Total supply:", totalSupply);
-            } catch (error) {
-                console.error("Error calling totalSupply:", error);
-            }
-
-            document.getElementById('connectWallet').addEventListener('click', connectWallet);
-            document.getElementById('disconnectWallet').addEventListener('click', disconnectWallet);
-            document.getElementById('registerChip').addEventListener('click', registerChip);
-            document.getElementById('mintNFT').addEventListener('click', mintNFT);
-            document.getElementById('addBaseSepolia').addEventListener('click', addBaseSepoliaNetwork);
-
-            // Get the chip ID from the URL parameter
-            const urlParams = new URLSearchParams(window.location.search);
-            chipId = urlParams.get('chipId');
-            await handleChipId();
-        } catch (error) {
-            console.error("Error initializing Web3 or contract:", error);
-            updateStatus('Error initializing. Check console for details.');
-        }
+        // Get the chip ID from the URL parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        chipId = urlParams.get('chipId');
+        handleChipId();
     } else {
         updateStatus('Please install MetaMask!');
     }
@@ -773,6 +752,7 @@ async function checkNetwork() {
     } else {
         updateStatus('Connected to Base Sepolia network');
         addBaseSepoliaButton.style.display = 'none';
+        initializeContract(); // Initialize the contract only after network check
     }
 }
 
@@ -793,6 +773,29 @@ async function addBaseSepoliaNetwork() {
         await checkNetwork();
     } catch (error) {
         updateStatus('Failed to add Base Sepolia network: ' + error.message);
+    }
+}
+
+async function initializeContract() {
+    try {
+        console.log("Contract Address:", CONTRACT_ADDRESS);
+        contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
+        console.log("Contract object created:", contract);
+
+        // Log available methods
+        console.log("Available contract methods:", Object.keys(contract.methods));
+
+        // Try to call a view function
+        try {
+            const totalSupply = await contract.methods.totalSupply().call();
+            console.log("Total supply:", totalSupply);
+        } catch (error) {
+            console.error("Error calling totalSupply:", error);
+        }
+
+    } catch (error) {
+        console.error("Error initializing Web3 or contract:", error);
+        updateStatus('Error initializing. Check console for details.');
     }
 }
 
