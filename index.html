@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ACS Membership NFT Minting</title>
+    <title>Welcome to the Future</title>
     <script src="https://cdn.jsdelivr.net/npm/web3@1.5.2/dist/web3.min.js"></script>
     <style>
         body {
@@ -11,37 +11,35 @@
             line-height: 1.6;
             margin: 0;
             padding: 0;
-            background-color: #f4f4f4;
-            color: #333;
+            background: linear-gradient(to right, #232526, #414345);
+            color: #fff;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
-            background: linear-gradient(to right, #232526, #414345);
+            text-align: center;
         }
         .container {
-            text-align: center;
             max-width: 600px;
             padding: 40px;
-            background: #fff;
+            background: rgba(0, 0, 0, 0.75);
             border-radius: 10px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
         h1 {
-            color: #333;
-            font-size: 2em;
+            font-size: 2.5em;
             margin-bottom: 20px;
-            text-transform: uppercase;
             letter-spacing: 2px;
+        }
+        p {
+            font-size: 1.2em;
+            margin: 20px 0;
         }
         button {
             background-color: #333;
             border: none;
             color: white;
             padding: 15px 30px;
-            text-align: center;
-            text-decoration: none;
-            display: inline-block;
             font-size: 16px;
             margin: 10px 2px;
             cursor: pointer;
@@ -50,20 +48,6 @@
         }
         button:hover {
             background-color: #555;
-        }
-        input[type="text"] {
-            padding: 10px;
-            margin: 10px 0;
-            width: calc(100% - 22px);
-            border: 1px solid #ccc;
-            border-radius: 5px;
-        }
-        #status {
-            margin-top: 20px;
-            padding: 10px;
-            background-color: #eaeaea;
-            border-radius: 5px;
-            font-size: 14px;
         }
         .admin-section, .user-section {
             display: none;
@@ -85,7 +69,10 @@
                 font-size: 14px;
             }
             h1 {
-                font-size: 1.5em;
+                font-size: 2em;
+            }
+            p {
+                font-size: 1em;
             }
         }
         @media (max-width: 480px) {
@@ -98,14 +85,21 @@
                 font-size: 12px;
             }
             h1 {
-                font-size: 1.2em;
+                font-size: 1.5em;
+            }
+            p {
+                font-size: 0.9em;
             }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>ACS NFT Minting</h1>
+        <h1>Welcome to the Future</h1>
+        <p>You are invited.</p>
+        <p>Experimentation makes ideas tangible.</p>
+        <p>Innovation beats fear of failure.</p>
+        <p>Nothing is perfect the first time.</p>
         <button id="connectWallet">Connect Wallet</button>
         <button id="manualConnect">Connect Wallet Manually</button>
 
