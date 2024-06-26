@@ -763,12 +763,14 @@ async function disconnectWallet() {
 async function checkNetwork() {
     const networkId = await web3.eth.net.getId();
     console.log("Current network ID:", networkId);
+    const addBaseSepoliaButton = document.getElementById('addBaseSepolia');
     if (parseInt(networkId, 10) !== parseInt(BASE_SEPOLIA_CHAIN_ID, 10)) {
         updateStatus('Please switch to the Base Sepolia network');
+        addBaseSepoliaButton.textContent = 'Add Base Sepolia';
         showAddSepoliaOption();
     } else {
         updateStatus('Connected to Base Sepolia network');
-        document.getElementById('addBaseSepolia').style.display = 'none';
+        addBaseSepoliaButton.style.display = 'none';
     }
 }
 
@@ -842,6 +844,12 @@ async function mintNFT() {
         if (tokenId && tokenId !== '0') {
             console.log("Chip ID already minted");
             updateStatus('Chip ID already minted');
+            document.getElementById('invitationTitle').textContent = 'ID ALREADY MINTED';
+            const mintButton = document.getElementById('mintNFT');
+            mintButton.classList.add('disabled-button');
+            mintButton.disabled = true;
+            const mintMessage = document.getElementById('mintMessage');
+            mintMessage.textContent = 'This chip ID has already been minted.';
             return;
         }
 
