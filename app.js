@@ -666,9 +666,13 @@ const CONTRACT_ABI = [
 	}
 ];
 
-
+  
 async function init() {
     console.log("Initializing...");
+
+    // Clear the user account from local storage on page load
+    localStorage.removeItem('userAccount');
+
     if (typeof window.ethereum !== 'undefined') {
         console.log("Ethereum object found");
         try {
@@ -697,17 +701,6 @@ async function init() {
             document.getElementById('registerChip').addEventListener('click', registerChip);
             document.getElementById('mintNFT').addEventListener('click', mintNFT);
             document.getElementById('manualConnect').addEventListener('click', openWalletApp);
-
-            // Check if user session exists
-            const savedAccount = localStorage.getItem('userAccount');
-            if (savedAccount) {
-                userAccount = savedAccount;
-                document.getElementById('connectWallet').style.display = 'none';
-                document.getElementById('manualConnect').style.display = 'none';
-                document.getElementById('userSection').style.display = 'block';
-                checkIfAdmin();
-                handleChipId();
-            }
 
             // Get the chip ID from the URL parameter
             const urlParams = new URLSearchParams(window.location.search);
