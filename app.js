@@ -726,6 +726,7 @@ async function init() {
 async function connectWallet() {
     console.log("Attempting to connect wallet...");
     updateStatus('Connecting wallet...');
+    showLoadingSpinner(true);
     if (typeof window.ethereum !== 'undefined') {
         try {
             // This line prompts the user to connect their wallet
@@ -742,6 +743,8 @@ async function connectWallet() {
         } catch (error) {
             console.error('Detailed error:', error);
             updateStatus('Failed to connect wallet: ' + error.message);
+        } finally {
+            showLoadingSpinner(false);
         }
     } else {
         updateStatus('MetaMask is not installed. Please install it to connect your wallet.');
@@ -838,6 +841,13 @@ function openWalletApp() {
 function updateStatus(message) {
     console.log("Status update:", message);
     document.getElementById('status').textContent = message;
+}
+
+function showLoadingSpinner(show) {
+    const spinner = document.getElementById('loadingSpinner');
+    if (spinner) {
+        spinner.style.display = show ? 'block' : 'none';
+    }
 }
 
 function handleChipId() {
