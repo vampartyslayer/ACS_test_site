@@ -667,9 +667,7 @@ const CONTRACT_ABI = [
 ];
 
 
-document.addEventListener('DOMContentLoaded', () => {
-    init();
-});
+window.onload = init;
 
 async function init() {
     console.log("Initializing...");
@@ -838,6 +836,3 @@ function handleChipId() {
         mintMessage.textContent = 'No chip ID detected. Please tap the NFC tag.';
     }
 }
-
-
-
