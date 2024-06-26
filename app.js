@@ -666,6 +666,7 @@ const CONTRACT_ABI = [
 	}
 ];
 
+
 async function init() {
     console.log("Initializing...");
     if (typeof window.ethereum !== 'undefined') {
@@ -697,16 +698,21 @@ async function init() {
             document.getElementById('mintNFT').addEventListener('click', mintNFT);
             document.getElementById('manualConnect').addEventListener('click', openWalletApp);
 
+            // Check if user session exists
+            const savedAccount = localStorage.getItem('userAccount');
+            if (savedAccount) {
+                userAccount = savedAccount;
+                document.getElementById('connectWallet').style.display = 'none';
+                document.getElementById('manualConnect').style.display = 'none';
+                document.getElementById('userSection').style.display = 'block';
+                checkIfAdmin();
+                handleChipId();
+            }
+
             // Get the chip ID from the URL parameter
             const urlParams = new URLSearchParams(window.location.search);
             chipId = urlParams.get('chipId');
-            if (chipId) {
-                document.getElementById('chipIdDisplay').textContent = chipId;
-                console.log("Chip ID detected:", chipId);
-            } else {
-                updateStatus('No chip ID detected. Please tap the NFC tag.');
-                console.log("No chip ID in URL");
-            }
+            handleChipId();
         } catch (error) {
             console.error("Error initializing Web3 or contract:", error);
             updateStatus('Error initializing. Check console for details.');
@@ -720,20 +726,25 @@ async function init() {
 async function connectWallet() {
     console.log("Attempting to connect wallet...");
     updateStatus('Connecting wallet...');
+    showLoadingSpinner(true);
     if (typeof window.ethereum !== 'undefined') {
         try {
             // This line prompts the user to connect their wallet
             const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
             userAccount = accounts[0];
+            localStorage.setItem('userAccount', userAccount); // Save user account to local storage
             console.log("Wallet connected:", userAccount);
             updateStatus('Wallet connected: ' + userAccount);
             document.getElementById('connectWallet').style.display = 'none';
             document.getElementById('manualConnect').style.display = 'none';
             document.getElementById('userSection').style.display = 'block';
             checkIfAdmin();
+            handleChipId();
         } catch (error) {
             console.error('Detailed error:', error);
             updateStatus('Failed to connect wallet: ' + error.message);
+        } finally {
+            showLoadingSpinner(false);
         }
     } else {
         updateStatus('MetaMask is not installed. Please install it to connect your wallet.');
@@ -830,6 +841,26 @@ function openWalletApp() {
 function updateStatus(message) {
     console.log("Status update:", message);
     document.getElementById('status').textContent = message;
+}
+
+function showLoadingSpinner(show) {
+    const spinner = document.getElementById('loadingSpinner');
+    spinner.style.display = show ? 'block' : 'none';
+}
+
+function handleChipId() {
+    const mintButton = document.getElementById('mintNFT');
+    const mintMessage = document.getElementById('mintMessage');
+    if (chipId) {
+        document.getElementById('chipIdDisplay').textContent = chipId;
+        mintButton.classList.remove('disabled-button');
+        mintButton.disabled = false;
+        mintMessage.textContent = '';
+    } else {
+        mintButton.classList.add('disabled-button');
+        mintButton.disabled = true;
+        mintMessage.textContent = 'No chip ID detected. Please tap the NFC tag.';
+    }
 }
 
 window.addEventListener('load', init);
