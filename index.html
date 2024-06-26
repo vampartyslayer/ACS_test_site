@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACS Membership NFT Minting</title>
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.5.2/dist/web3.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+        }
+        input[type="text"] {
+            padding: 10px;
+            margin: 5px 0;
+            width: 200px;
+        }
+        #status {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #ddd;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>ACS Membership NFT Minting</h1>
+    <button id="connectWallet">Connect Wallet</button>
+    <button id="manualConnect">Connect Wallet Manually</button>
+
+    <div id="adminSection" style="display:none;">
+        <h2>Admin Section</h2>
+        <input type="text" id="chipIdRegister" placeholder="Chip ID to register">
+        <button id="registerChip">Register Chip</button>
+    </div>
+
+    <div id="userSection" style="display:none;">
+        <h2>Mint Your NFT</h2>
+        <p>Chip ID: <span id="chipIdDisplay"></span></p>
+        <button id="mintNFT">Mint NFT</button>
+    </div>
+
+    <p id="status"></p>
+
+    <script src="app.js"></script>
+</body>
+</html>
