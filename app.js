@@ -666,7 +666,7 @@ const CONTRACT_ABI = [
 	}
 ];
 
-  
+
 async function init() {
     console.log("Initializing...");
 
@@ -698,6 +698,7 @@ async function init() {
             console.log("Connected to network ID:", networkId);
 
             document.getElementById('connectWallet').addEventListener('click', connectWallet);
+            document.getElementById('disconnectWallet').addEventListener('click', disconnectWallet);
             document.getElementById('registerChip').addEventListener('click', registerChip);
             document.getElementById('mintNFT').addEventListener('click', mintNFT);
             document.getElementById('manualConnect').addEventListener('click', openWalletApp);
@@ -730,6 +731,7 @@ async function connectWallet() {
             updateStatus('Wallet connected: ' + userAccount);
             document.getElementById('connectWallet').style.display = 'none';
             document.getElementById('manualConnect').style.display = 'none';
+            document.getElementById('disconnectWallet').style.display = 'block';
             document.getElementById('userSection').style.display = 'block';
             checkIfAdmin();
             handleChipId();
@@ -742,6 +744,18 @@ async function connectWallet() {
     } else {
         updateStatus('MetaMask is not installed. Please install it to connect your wallet.');
     }
+}
+
+function disconnectWallet() {
+    console.log("Disconnecting wallet...");
+    updateStatus('Wallet disconnected.');
+    userAccount = null;
+    localStorage.removeItem('userAccount');
+    document.getElementById('connectWallet').style.display = 'block';
+    document.getElementById('manualConnect').style.display = 'block';
+    document.getElementById('disconnectWallet').style.display = 'none';
+    document.getElementById('userSection').style.display = 'none';
+    document.getElementById('adminSection').style.display = 'none';
 }
 
 async function checkIfAdmin() {
@@ -859,3 +873,4 @@ function handleChipId() {
 }
 
 window.addEventListener('load', init);
+
