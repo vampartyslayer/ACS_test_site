@@ -719,6 +719,7 @@ async function init() {
 
 async function connectWallet() {
     console.log("Attempting to connect wallet...");
+    updateStatus('Connecting wallet...');
     if (typeof window.ethereum !== 'undefined') {
         try {
             // This line prompts the user to connect their wallet
@@ -726,6 +727,8 @@ async function connectWallet() {
             userAccount = accounts[0];
             console.log("Wallet connected:", userAccount);
             updateStatus('Wallet connected: ' + userAccount);
+            document.getElementById('connectWallet').style.display = 'none';
+            document.getElementById('manualConnect').style.display = 'none';
             document.getElementById('userSection').style.display = 'block';
             checkIfAdmin();
         } catch (error) {
@@ -761,6 +764,7 @@ async function checkIfAdmin() {
 
 async function registerChip() {
     console.log("Attempting to register chip...");
+    updateStatus('Registering chip...');
     const chipIdToRegister = document.getElementById('chipIdRegister').value;
     try {
         await contract.methods.registerChip(chipIdToRegister).send({ from: userAccount });
@@ -774,6 +778,7 @@ async function registerChip() {
 
 async function mintNFT() {
     console.log("Attempting to mint NFT...");
+    updateStatus('Minting NFT...');
     if (!chipId) {
         console.log("No chip ID available");
         updateStatus('No chip ID detected. Please tap the NFC tag.');
