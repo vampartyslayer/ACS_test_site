@@ -63,20 +63,6 @@
             background-color: #666;
             cursor: not-allowed;
         }
-        .loading-spinner {
-            display: none;
-            border: 4px solid #f3f3f3;
-            border-radius: 50%;
-            border-top: 4px solid #333;
-            width: 24px;
-            height: 24px;
-            animation: spin 2s linear infinite;
-            margin: 0 auto;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
         @media (max-width: 768px) {
             .container {
                 padding: 20px;
@@ -113,15 +99,13 @@
 <body>
     <div class="container">
         <h1>YOU ARE INVITED</h1>
-        <p>Experimentation makes ideas tangible</p>
-        <p>Innovation beats fear of failure</p>
-        <p>Nothing is perfect the first time</p>
-        <p>Join us</p>
+        <p>Experimentation makes ideas tangible.</p>
+        <p>Innovation beats fear of failure.</p>
+        <p>Nothing is perfect the first time.</p>
+        <p>Join us.</p>
         <button id="connectWallet">Connect Wallet</button>
         <button id="manualConnect">Connect Wallet Manually</button>
         <button id="disconnectWallet" style="display:none;">Disconnect Wallet</button>
-
-        <div class="loading-spinner" id="loadingSpinner"></div>
 
         <div id="adminSection" class="admin-section">
             <h2>Admin Section</h2>
