@@ -762,6 +762,7 @@ async function disconnectWallet() {
 
 async function checkNetwork() {
     const networkId = await web3.eth.net.getId();
+    console.log("Current network ID:", networkId);
     if (parseInt(networkId, 10) !== parseInt(BASE_SEPOLIA_CHAIN_ID, 10)) {
         updateStatus('Please switch to the Base Sepolia network');
         showAddSepoliaOption();
