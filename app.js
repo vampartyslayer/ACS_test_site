@@ -666,6 +666,8 @@ const CONTRACT_ABI = [
 	}
 ];
 
+
+
 const BASE_SEPOLIA_CHAIN_ID = '84532'; // Chain ID for Base Sepolia
 const BASE_SEPOLIA_PARAMS = {
     chainId: '0x14CC4', // Chain ID in hex (84532 in decimal)
@@ -681,11 +683,12 @@ const BASE_SEPOLIA_PARAMS = {
 
 async function init() {
     console.log("Initializing...");
-    if (typeof window.ethereum !== 'undefined') {
-        console.log("Ethereum object found");
+    if (window.ethereum) {
+        web3 = new Web3(window.ethereum);
+        console.log("Web3 initialized with window.ethereum");
+
         try {
-            web3 = new Web3(window.ethereum);
-            console.log("Web3 initialized");
+            await window.ethereum.request({ method: 'eth_requestAccounts' });
 
             console.log("Contract Address:", CONTRACT_ADDRESS);
             contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
@@ -717,7 +720,6 @@ async function init() {
             updateStatus('Error initializing. Check console for details.');
         }
     } else {
-        console.log("No Ethereum object found");
         updateStatus('Please install MetaMask!');
     }
 }
@@ -725,7 +727,7 @@ async function init() {
 async function connectWallet() {
     console.log("Attempting to connect wallet...");
     updateStatus('Connecting wallet...');
-    if (typeof window.ethereum !== 'undefined') {
+    if (window.ethereum) {
         try {
             const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
             userAccount = accounts[0];
