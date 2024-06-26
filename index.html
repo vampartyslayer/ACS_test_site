@@ -68,6 +68,11 @@
             background-color: #666;
             cursor: not-allowed;
         }
+        .bottom-button-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
         @media (max-width: 768px) {
             .container {
                 padding: 20px;
@@ -103,14 +108,13 @@
 </head>
 <body>
     <div class="container">
-        <h1>YOU ARE INVITED</h1>
-        <p>Experimentation makes ideas tangible.</p>
-        <p>Innovation beats fear of failure.</p>
-        <p>Nothing is perfect the first time.</p>
-        <p>Join us.</p>
+        <h1 id="invitationTitle">YOU ARE INVITED</h1>
+        <p>Experimentation makes ideas tangible</p>
+        <p>Innovation beats fear of failure</p>
+        <p>Nothing is perfect the first time</p>
+        <p>Join us</p>
         <div class="button-container">
             <button id="connectWallet">Connect Wallet</button>
-            <button id="disconnectWallet" style="display:none;">Disconnect Wallet</button>
         </div>
 
         <div id="adminSection" class="admin-section">
@@ -127,6 +131,10 @@
         </div>
 
         <p id="status"></p>
+
+        <div class="bottom-button-container">
+            <button id="disconnectWallet" style="display:none;">Disconnect Wallet</button>
+        </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/web3@1.5.2/dist/web3.min.js"></script>
     <script src="app.js"></script>
