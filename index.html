@@ -7,59 +7,93 @@
     <script src="https://cdn.jsdelivr.net/npm/web3@1.5.2/dist/web3.min.js"></script>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
             line-height: 1.6;
             margin: 0;
-            padding: 20px;
+            padding: 0;
             background-color: #f4f4f4;
-        }
-        h1, h2 {
             color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: linear-gradient(to right, #232526, #414345);
+        }
+        .container {
+            text-align: center;
+            max-width: 600px;
+            padding: 40px;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #fff;
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
         }
         button {
-            background-color: #4CAF50;
+            background-color: #333;
             border: none;
             color: white;
-            padding: 10px 20px;
+            padding: 15px 30px;
             text-align: center;
             text-decoration: none;
             display: inline-block;
             font-size: 16px;
-            margin: 4px 2px;
+            margin: 10px 2px;
             cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #555;
         }
         input[type="text"] {
             padding: 10px;
-            margin: 5px 0;
-            width: 200px;
+            margin: 10px 0;
+            width: calc(100% - 22px);
+            border: 1px solid #ccc;
+            border-radius: 5px;
         }
         #status {
             margin-top: 20px;
             padding: 10px;
-            background-color: #ddd;
+            background-color: #eaeaea;
             border-radius: 5px;
+            font-size: 14px;
+        }
+        .admin-section, .user-section {
+            display: none;
+            margin-top: 20px;
+        }
+        .chip-id-display {
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
-    <h1>ACS Membership NFT Minting</h1>
-    <button id="connectWallet">Connect Wallet</button>
-    <button id="manualConnect">Connect Wallet Manually</button>
+    <div class="container">
+        <h1>ACS NFT Minting</h1>
+        <button id="connectWallet">Connect Wallet</button>
+        <button id="manualConnect">Connect Wallet Manually</button>
 
-    <div id="adminSection" style="display:none;">
-        <h2>Admin Section</h2>
-        <input type="text" id="chipIdRegister" placeholder="Chip ID to register">
-        <button id="registerChip">Register Chip</button>
+        <div id="adminSection" class="admin-section">
+            <h2>Admin Section</h2>
+            <input type="text" id="chipIdRegister" placeholder="Chip ID to register">
+            <button id="registerChip">Register Chip</button>
+        </div>
+
+        <div id="userSection" class="user-section">
+            <h2>Mint Your NFT</h2>
+            <p>Chip ID: <span id="chipIdDisplay" class="chip-id-display"></span></p>
+            <button id="mintNFT">Mint NFT</button>
+        </div>
+
+        <p id="status"></p>
     </div>
-
-    <div id="userSection" style="display:none;">
-        <h2>Mint Your NFT</h2>
-        <p>Chip ID: <span id="chipIdDisplay"></span></p>
-        <button id="mintNFT">Mint NFT</button>
-    </div>
-
-    <p id="status"></p>
-
     <script src="app.js"></script>
 </body>
 </html>
