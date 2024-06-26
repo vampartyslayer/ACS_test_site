@@ -723,66 +723,9 @@ async function init() {
     }
 }
 
-async function init() {
-    console.log("Initializing...");
-    if (typeof window.ethereum !== 'undefined') {
-        console.log("Ethereum object found");
-        try {
-            web3 = new Web3(window.ethereum);
-            console.log("Web3 initialized");
-
-            console.log("Contract Address:", CONTRACT_ADDRESS);
-            contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
-            console.log("Contract object created:", contract);
-
-            // Log available methods
-            console.log("Available contract methods:", Object.keys(contract.methods));
-
-            // Try to call a view function
-            try {
-                const totalSupply = await contract.methods.totalSupply().call();
-                console.log("Total supply:", totalSupply);
-            } catch (error) {
-                console.error("Error calling totalSupply:", error);
-            }
-
-            const networkId = await web3.eth.net.getId();
-            console.log("Connected to network ID:", networkId);
-
-            document.getElementById('connectWallet').addEventListener('click', connectWallet);
-            document.getElementById('registerChip').addEventListener('click', registerChip);
-            document.getElementById('mintNFT').addEventListener('click', mintNFT);
-            document.getElementById('manualConnect').addEventListener('click', openWalletApp);
-
-            // Check if user session exists
-            const savedAccount = localStorage.getItem('userAccount');
-            if (savedAccount) {
-                userAccount = savedAccount;
-                document.getElementById('connectWallet').style.display = 'none';
-                document.getElementById('manualConnect').style.display = 'none';
-                document.getElementById('userSection').style.display = 'block';
-                checkIfAdmin();
-                handleChipId();
-            }
-
-            // Get the chip ID from the URL parameter
-            const urlParams = new URLSearchParams(window.location.search);
-            chipId = urlParams.get('chipId');
-            handleChipId();
-        } catch (error) {
-            console.error("Error initializing Web3 or contract:", error);
-            updateStatus('Error initializing. Check console for details.');
-        }
-    } else {
-        console.log("No Ethereum object found");
-        updateStatus('Please install MetaMask!');
-    }
-}
-
 async function connectWallet() {
     console.log("Attempting to connect wallet...");
     updateStatus('Connecting wallet...');
-    showLoadingSpinner(true);
     if (typeof window.ethereum !== 'undefined') {
         try {
             // This line prompts the user to connect their wallet
@@ -799,8 +742,6 @@ async function connectWallet() {
         } catch (error) {
             console.error('Detailed error:', error);
             updateStatus('Failed to connect wallet: ' + error.message);
-        } finally {
-            showLoadingSpinner(false);
         }
     } else {
         updateStatus('MetaMask is not installed. Please install it to connect your wallet.');
@@ -897,11 +838,6 @@ function openWalletApp() {
 function updateStatus(message) {
     console.log("Status update:", message);
     document.getElementById('status').textContent = message;
-}
-
-function showLoadingSpinner(show) {
-    const spinner = document.getElementById('loadingSpinner');
-    spinner.style.display = show ? 'block' : 'none';
 }
 
 function handleChipId() {
