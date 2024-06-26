@@ -36,6 +36,12 @@
             letter-spacing: 1px;
             font-weight: 500;
         }
+        .button-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
         button {
             background-color: #fff;
             border: none;
@@ -103,9 +109,10 @@
         <p>Innovation beats fear of failure.</p>
         <p>Nothing is perfect the first time.</p>
         <p>Join us.</p>
-        <button id="connectWallet">Connect Wallet</button>
-        <button id="manualConnect">Connect Wallet Manually</button>
-        <button id="disconnectWallet" style="display:none;">Disconnect Wallet</button>
+        <div class="button-container">
+            <button id="connectWallet">Connect Wallet</button>
+            <button id="disconnectWallet" style="display:none;">Disconnect Wallet</button>
+        </div>
 
         <div id="adminSection" class="admin-section">
             <h2>Admin Section</h2>
