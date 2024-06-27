@@ -849,7 +849,9 @@ async function mintNFT() {
         console.log("Checking if chip ID is already minted:", chipId);
         const tokenId = await contract.methods.chipToTokenId(chipId).call();
         console.log("Token ID for chip:", tokenId);
-        if (tokenId && tokenId !== '0' && tokenId !== '') {
+
+        // Adjusted check for a valid token ID
+        if (tokenId && parseInt(tokenId, 10) !== 0) {
             console.log("Chip ID already minted");
             updateStatus('Chip ID already minted');
             document.getElementById('invitationTitle').textContent = 'ID ALREADY MINTED';
@@ -877,19 +879,25 @@ async function handleChipId() {
     const mintMessage = document.getElementById('mintMessage');
     if (chipId) {
         console.log("Handling chip ID:", chipId);
-        // Check if the chip ID has already been minted
-        const tokenId = await contract.methods.chipToTokenId(chipId).call();
-        console.log("Token ID for chip:", tokenId);
-        if (tokenId && tokenId !== '0' && tokenId !== '') {
-            document.getElementById('invitationTitle').textContent = 'ID ALREADY MINTED';
-            mintButton.classList.add('disabled-button');
-            mintButton.disabled = true;
-            mintMessage.textContent = 'This chip ID has already been minted.';
-        } else {
-            document.getElementById('chipIdDisplay').textContent = chipId;
-            mintButton.classList.remove('disabled-button');
-            mintButton.disabled = false;
-            mintMessage.textContent = '';
+        try {
+            const tokenId = await contract.methods.chipToTokenId(chipId).call();
+            console.log("Token ID for chip:", tokenId);
+
+            // Adjusted check for a valid token ID
+            if (tokenId && parseInt(tokenId, 10) !== 0) {
+                document.getElementById('invitationTitle').textContent = 'ID ALREADY MINTED';
+                mintButton.classList.add('disabled-button');
+                mintButton.disabled = true;
+                mintMessage.textContent = 'This chip ID has already been minted.';
+            } else {
+                document.getElementById('chipIdDisplay').textContent = chipId;
+                mintButton.classList.remove('disabled-button');
+                mintButton.disabled = false;
+                mintMessage.textContent = '';
+            }
+        } catch (error) {
+            console.error("Error handling chip ID:", error);
+            updateStatus('Error handling chip ID: ' + error.message);
         }
     } else {
         document.getElementById('invitationTitle').textContent = 'YOU WERE NOT INVITED';
