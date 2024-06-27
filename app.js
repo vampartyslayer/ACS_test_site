@@ -667,6 +667,7 @@ const CONTRACT_ABI = [
 ];
 
 
+
 const BASE_SEPOLIA_CHAIN_ID = '84532'; // Chain ID for Base Sepolia
 const BASE_SEPOLIA_PARAMS = {
     chainId: '0x14CC4', // Chain ID in hex (84532 in decimal)
@@ -716,7 +717,7 @@ async function connectWallet() {
             document.getElementById('userSection').style.display = 'block';
             await checkNetwork(); // Check network after connecting wallet
             await handleChipId();
-            checkIfAdmin();
+            await checkIfAdmin();
         } catch (error) {
             console.error('Failed to connect wallet:', error);
             updateStatus('Failed to connect wallet: ' + error.message);
@@ -751,7 +752,7 @@ async function checkNetwork() {
         } else {
             updateStatus('Connected to Base Sepolia network');
             addBaseSepoliaButton.style.display = 'none';
-            initializeContract(); // Initialize the contract only after network check
+            await initializeContract(); // Initialize the contract only after network check
         }
     } catch (error) {
         console.error('Error checking network:', error);
@@ -908,4 +909,3 @@ function updateStatus(message) {
 }
 
 window.addEventListener('load', init);
-
