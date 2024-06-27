@@ -667,7 +667,6 @@ const CONTRACT_ABI = [
 ];
 
 
-
 const BASE_SEPOLIA_CHAIN_ID = '84532'; // Chain ID for Base Sepolia
 const BASE_SEPOLIA_PARAMS = {
     chainId: '0x14CC4', // Chain ID in hex (84532 in decimal)
@@ -696,7 +695,7 @@ async function init() {
         // Get the chip ID from the URL parameter
         const urlParams = new URLSearchParams(window.location.search);
         chipId = urlParams.get('chipId');
-        handleChipId();
+        await handleChipId();
     } else {
         updateStatus('Please install MetaMask or another compatible wallet!');
     }
@@ -716,6 +715,8 @@ async function connectWallet() {
             document.getElementById('disconnectWallet').style.display = 'block';
             document.getElementById('userSection').style.display = 'block';
             await checkNetwork(); // Check network after connecting wallet
+            await handleChipId();
+            checkIfAdmin();
         } catch (error) {
             console.error('Failed to connect wallet:', error);
             updateStatus('Failed to connect wallet: ' + error.message);
@@ -846,9 +847,10 @@ async function mintNFT() {
         return;
     }
     try {
-        // Check if the chip ID has already been minted
+        console.log("Checking if chip ID is already minted:", chipId);
         const tokenId = await contract.methods.chipToTokenId(chipId).call();
-        if (tokenId && tokenId !== '0') {
+        console.log("Token ID for chip:", tokenId);
+        if (tokenId && tokenId !== '0' && tokenId !== '') {
             console.log("Chip ID already minted");
             updateStatus('Chip ID already minted');
             document.getElementById('invitationTitle').textContent = 'ID ALREADY MINTED';
@@ -874,9 +876,11 @@ async function handleChipId() {
     const mintButton = document.getElementById('mintNFT');
     const mintMessage = document.getElementById('mintMessage');
     if (chipId) {
+        console.log("Handling chip ID:", chipId);
         // Check if the chip ID has already been minted
         const tokenId = await contract.methods.chipToTokenId(chipId).call();
-        if (tokenId && tokenId !== '0') {
+        console.log("Token ID for chip:", tokenId);
+        if (tokenId && tokenId !== '0' && tokenId !== '') {
             document.getElementById('invitationTitle').textContent = 'ID ALREADY MINTED';
             mintButton.classList.add('disabled-button');
             mintButton.disabled = true;
@@ -904,3 +908,4 @@ function updateStatus(message) {
 }
 
 window.addEventListener('load', init);
+
