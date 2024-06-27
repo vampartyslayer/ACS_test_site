@@ -692,7 +692,6 @@ async function init() {
         document.getElementById('mintNFT').addEventListener('click', mintNFT);
         document.getElementById('addBaseSepolia').addEventListener('click', addBaseSepoliaNetwork);
 
-        // Get the chip ID from the URL parameter
         const urlParams = new URLSearchParams(window.location.search);
         chipId = urlParams.get('chipId');
         await handleChipId();
