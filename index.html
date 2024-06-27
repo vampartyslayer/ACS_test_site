@@ -5,7 +5,105 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Welcome to the Future</title>
     <style>
-        /* Your existing styles */
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            text-align: center;
+            background: #000;
+            color: #fff;
+        }
+        .container {
+            text-align: center;
+            max-width: 800px;
+            padding: 40px;
+        }
+        h1 {
+            font-size: 4em;
+            margin: 0 0 20px;
+            letter-spacing: 2px;
+            font-weight: 900;
+        }
+        p {
+            font-size: 1.5em;
+            margin: 10px 0;
+            letter-spacing: 1px;
+            font-weight: 500;
+        }
+        .button-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        button {
+            background-color: #fff;
+            border: none;
+            color: #000;
+            padding: 15px 30px;
+            font-size: 1em;
+            margin: 20px 10px;
+            cursor: pointer;
+            border-radius: 5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #ddd;
+        }
+        .admin-section, .user-section {
+            display: none;
+            margin-top: 20px;
+        }
+        .chip-id-display {
+            font-weight: bold;
+        }
+        .disabled-button {
+            background-color: #666;
+            cursor: not-allowed;
+        }
+        .bottom-button-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            h1 {
+                font-size: 2.5em;
+            }
+            p {
+                font-size: 1.2em;
+            }
+            button {
+                padding: 10px 20px;
+                font-size: 0.9em;
+            }
+        }
+        @media (max-width: 480px) {
+            .container {
+                width: 90%;
+                padding: 10px;
+            }
+            h1 {
+                font-size: 2em;
+            }
+            p {
+                font-size: 1em;
+            }
+            button {
+                padding: 8px 16px;
+                font-size: 0.8em;
+            }
+        }
     </style>
 </head>
 <body>
