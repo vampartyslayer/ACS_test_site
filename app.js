@@ -692,6 +692,10 @@ async function init() {
         document.getElementById('mintNFT').addEventListener('click', mintNFT);
         document.getElementById('addBaseSepolia').addEventListener('click', addBaseSepoliaNetwork);
 
+        // Initialize contract here
+        contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
+        console.log("Contract object created:", contract);
+
         const urlParams = new URLSearchParams(window.location.search);
         chipId = urlParams.get('chipId');
         await handleChipId();
@@ -821,6 +825,7 @@ async function checkIfAdmin() {
         console.error("Error checking admin status:", error);
     }
 }
+
 async function registerChip() {
     console.log("Attempting to register chip...");
     updateStatus('Registering chip...');
@@ -850,7 +855,7 @@ async function mintNFT() {
         console.log("Token ID for chip:", tokenId);
 
         // Adjusted check for a valid token ID
-        if (tokenId && parseInt(tokenId, 10) !== 0 && parseInt(tokenId, 10) !== -1) {
+        if (tokenId && parseInt(tokenId, 10) !== 0) {
             console.log("Chip ID already minted");
             updateStatus('Chip ID already minted');
             document.getElementById('invitationTitle').textContent = 'ID ALREADY MINTED';
@@ -883,7 +888,7 @@ async function handleChipId() {
             console.log("Token ID for chip:", tokenId);
 
             // Adjusted check for a valid token ID
-            if (tokenId && parseInt(tokenId, 10) !== 0 && parseInt(tokenId, 10) !== -1) {
+            if (tokenId && parseInt(tokenId, 10) !== 0) {
                 document.getElementById('invitationTitle').textContent = 'ID ALREADY MINTED';
                 mintButton.classList.add('disabled-button');
                 mintButton.disabled = true;
