@@ -666,7 +666,6 @@ const CONTRACT_ABI = [
 	}
 ];
 
-
 const BASE_SEPOLIA_CHAIN_ID = '84532'; // Chain ID for Base Sepolia
 const BASE_SEPOLIA_PARAMS = {
     chainId: '0x14CC4', // Chain ID in hex (84532 in decimal)
