@@ -666,6 +666,7 @@ const CONTRACT_ABI = [
 	}
 ];
 
+
 const BASE_SEPOLIA_CHAIN_ID = '84532'; // Chain ID for Base Sepolia
 const BASE_SEPOLIA_PARAMS = {
     chainId: '0x14CC4', // Chain ID in hex (84532 in decimal)
@@ -681,46 +682,74 @@ const BASE_SEPOLIA_PARAMS = {
 
 async function init() {
     console.log("Initializing...");
-    if (window.ethereum) {
-        web3 = new Web3(window.ethereum);
-        console.log("Web3 initialized with window.ethereum");
+    if (typeof window.ethereum !== 'undefined') {
+        console.log("Ethereum object found");
+        try {
+            web3 = new Web3(window.ethereum);
+            console.log("Web3 initialized");
 
-        document.getElementById('connectWallet').addEventListener('click', connectWallet);
-        document.getElementById('disconnectWallet').addEventListener('click', disconnectWallet);
-        document.getElementById('registerChip').addEventListener('click', registerChip);
-        document.getElementById('mintNFT').addEventListener('click', mintNFT);
-        document.getElementById('addBaseSepolia').addEventListener('click', addBaseSepoliaNetwork);
+            console.log("Contract Address:", CONTRACT_ADDRESS);
+            contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
+            console.log("Contract object created:", contract);
 
-        const urlParams = new URLSearchParams(window.location.search);
-        chipId = urlParams.get('chipId');
-        await handleChipId();
+            // Log available methods
+            console.log("Available contract methods:", Object.keys(contract.methods));
+
+            // Try to call a view function
+            try {
+                const totalSupply = await contract.methods.totalSupply().call();
+                console.log("Total supply:", totalSupply);
+            } catch (error) {
+                console.error("Error calling totalSupply:", error);
+            }
+
+            const networkId = await web3.eth.net.getId();
+            console.log("Connected to network ID:", networkId);
+
+            document.getElementById('connectWallet').addEventListener('click', connectWallet);
+            document.getElementById('disconnectWallet').addEventListener('click', disconnectWallet);
+            document.getElementById('registerChip').addEventListener('click', registerChip);
+            document.getElementById('mintNFT').addEventListener('click', mintNFT);
+            document.getElementById('addBaseSepolia').addEventListener('click', addBaseSepoliaNetwork);
+
+            // Get the chip ID from the URL parameter
+            const urlParams = new URLSearchParams(window.location.search);
+            chipId = urlParams.get('chipId');
+            if (chipId) {
+                document.getElementById('chipIdDisplay').textContent = chipId;
+                console.log("Chip ID detected:", chipId);
+            } else {
+                updateStatus('No chip ID detected. Please tap the NFC tag.');
+                console.log("No chip ID in URL");
+            }
+        } catch (error) {
+            console.error("Error initializing Web3 or contract:", error);
+            updateStatus('Error initializing. Check console for details.');
+        }
     } else {
-        updateStatus('Please install MetaMask or another compatible wallet!');
+        console.log("No Ethereum object found");
+        updateStatus('Please install MetaMask!');
     }
 }
 
 async function connectWallet() {
     console.log("Attempting to connect wallet...");
-    updateStatus('Connecting wallet...');
-    if (window.ethereum) {
+    if (typeof window.ethereum !== 'undefined') {
         try {
             const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
             userAccount = accounts[0];
-            localStorage.setItem('userAccount', userAccount); // Save user account to local storage
             console.log("Wallet connected:", userAccount);
             updateStatus('Wallet connected: ' + userAccount);
             document.getElementById('connectWallet').style.display = 'none';
             document.getElementById('disconnectWallet').style.display = 'block';
             document.getElementById('userSection').style.display = 'block';
-            await checkNetwork(); // Check network after connecting wallet
-            await handleChipId();
-            await checkIfAdmin();
+            checkIfAdmin();
         } catch (error) {
-            console.error('Failed to connect wallet:', error);
+            console.error('Detailed error:', error);
             updateStatus('Failed to connect wallet: ' + error.message);
         }
     } else {
-        updateStatus('MetaMask or another compatible wallet is not installed. Please install it to connect your wallet.');
+        updateStatus('MetaMask is not installed. Please install it to connect your wallet.');
     }
 }
 
@@ -736,74 +765,10 @@ async function disconnectWallet() {
     document.getElementById('addBaseSepolia').style.display = 'none';
 }
 
-async function checkNetwork() {
-    try {
-        const networkId = await web3.eth.net.getId();
-        console.log("Current network ID:", networkId);
-        const addBaseSepoliaButton = document.getElementById('addBaseSepolia');
-        if (parseInt(networkId, 10) !== parseInt(BASE_SEPOLIA_CHAIN_ID, 10)) {
-            updateStatus('Please switch to the Base Sepolia network');
-            addBaseSepoliaButton.textContent = 'Add Base Sepolia';
-            addBaseSepoliaButton.onclick = addBaseSepoliaNetwork;
-            showAddSepoliaOption();
-        } else {
-            updateStatus('Connected to Base Sepolia network');
-            addBaseSepoliaButton.style.display = 'none';
-            await initializeContract(); // Initialize the contract only after network check
-        }
-    } catch (error) {
-        console.error('Error checking network:', error);
-        updateStatus('Error checking network: ' + error.message);
-    }
-}
-
-function showAddSepoliaOption() {
-    const addSepoliaButton = document.getElementById('addBaseSepolia');
-    if (addSepoliaButton) {
-        addSepoliaButton.style.display = 'block';
-    }
-}
-
-async function addBaseSepoliaNetwork() {
-    try {
-        await ethereum.request({
-            method: 'wallet_addEthereumChain',
-            params: [BASE_SEPOLIA_PARAMS],
-        });
-        updateStatus('Base Sepolia network added. Please switch to it.');
-        await checkNetwork();
-    } catch (error) {
-        updateStatus('Failed to add Base Sepolia network: ' + error.message);
-        console.error('Error adding Base Sepolia network:', error);
-    }
-}
-
-async function initializeContract() {
-    try {
-        console.log("Initializing contract...");
-        contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
-        console.log("Contract object created:", contract);
-
-        // Log available methods
-        console.log("Available contract methods:", Object.keys(contract.methods));
-
-        // Try to call a view function
-        try {
-            const totalSupply = await contract.methods.totalSupply().call();
-            console.log("Total supply:", totalSupply);
-        } catch (error) {
-            console.error("Error calling totalSupply:", error);
-        }
-    } catch (error) {
-        console.error("Error initializing contract:", error);
-        updateStatus('Error initializing contract. Check console for details.');
-    }
-}
-
 async function checkIfAdmin() {
     console.log("Checking if user is admin...");
     try {
-        if (contract && contract.methods.owner) {
+        if (contract.methods.owner) {
             const owner = await contract.methods.owner().call();
             console.log("Contract owner:", owner);
             console.log("Current user:", userAccount);
@@ -865,7 +830,6 @@ async function displayRegisteredChips() {
 
 async function registerChip() {
     console.log("Attempting to register chip...");
-    updateStatus('Registering chip...');
     const chipIdToRegister = document.getElementById('chipIdRegister').value.trim(); // Trim any leading/trailing spaces
     if (!chipIdToRegister) {
         updateStatus('Chip ID cannot be empty.');
@@ -876,19 +840,16 @@ async function registerChip() {
         console.log("Contract owner:", owner);
         console.log("Current user:", userAccount);
 
-        // Ensure correct case sensitivity
         if (userAccount.toLowerCase() !== owner.toLowerCase()) {
             throw new Error("Only the contract owner can register chips.");
         }
 
-        // Ensure correct network
         const networkId = await web3.eth.net.getId();
         console.log("Current network ID:", networkId);
         if (parseInt(networkId, 10) !== parseInt(BASE_SEPOLIA_CHAIN_ID, 10)) {
             throw new Error("Please switch to the Base Sepolia network.");
         }
 
-        // Send the transaction
         await contract.methods.registerChip(chipIdToRegister).send({ from: userAccount });
         console.log("Chip registered successfully:", chipIdToRegister);
         updateStatus('Chip registered successfully');
@@ -904,20 +865,17 @@ async function mintNFT() {
     updateStatus('Minting NFT...');
     if (!chipId) {
         console.log("No chip ID available");
-        document.getElementById('invitationTitle').textContent = 'YOU WERE NOT INVITED';
-        updateStatus('You have not tapped in');
+        updateStatus('No chip ID detected. Please tap the NFC tag.');
         return;
     }
     try {
-        console.log("Checking if chip ID is registered and not minted:", chipId);
+        console.log("Minting with chip ID:", chipId);
         const tokenId = await contract.methods.chipToTokenId(chipId).call();
         console.log("Token ID for chip:", tokenId);
 
-        // Ensure tokenId is valid
         if (tokenId == 0) {
             console.log("Chip ID not registered");
             updateStatus('Chip ID not registered');
-            document.getElementById('invitationTitle').textContent = 'CHIP NOT REGISTERED';
             return;
         }
 
@@ -927,69 +885,15 @@ async function mintNFT() {
         if (tokenIdMinted) {
             console.log("Chip ID already minted");
             updateStatus('Chip ID already minted');
-            document.getElementById('invitationTitle').textContent = 'ID ALREADY MINTED';
-            const mintButton = document.getElementById('mintNFT');
-            mintButton.classList.add('disabled-button');
-            mintButton.disabled = true;
-            const mintMessage = document.getElementById('mintMessage');
-            mintMessage.textContent = 'This chip ID has already been minted.';
             return;
         }
 
-        console.log("Minting with chip ID:", chipId);
-        const gasEstimate = await contract.methods.mintNFT(chipId).estimateGas({ from: userAccount });
-        await contract.methods.mintNFT(chipId).send({ from: userAccount, gas: gasEstimate });
+        await contract.methods.mintNFT(chipId).send({ from: userAccount });
         console.log("NFT minted successfully");
-        updateStatus('NFT minted successfully');
+        updateStatus('NFT minted successfully!');
     } catch (error) {
         console.error("Error minting NFT:", error);
         updateStatus('Failed to mint NFT: ' + error.message);
-    }
-}
-
-async function handleChipId() {
-    const mintButton = document.getElementById('mintNFT');
-    const mintMessage = document.getElementById('mintMessage');
-    if (chipId) {
-        console.log("Handling chip ID:", chipId);
-        try {
-            const tokenId = await contract.methods.chipToTokenId(chipId).call();
-            console.log("Token ID for chip:", tokenId);
-
-            // Ensure tokenId is valid
-            if (tokenId == 0) {
-                console.log("Chip ID not registered");
-                document.getElementById('invitationTitle').textContent = 'CHIP NOT REGISTERED';
-                mintButton.classList.add('disabled-button');
-                mintButton.disabled = true;
-                mintMessage.textContent = 'This chip ID is not registered.';
-                return;
-            }
-
-            // Check if token ID has been minted
-            const tokenIdMinted = await contract.methods.tokenIdMinted(tokenId).call();
-            console.log("Token ID Minted Status:", tokenIdMinted);
-
-            if (tokenIdMinted) {
-                document.getElementById('invitationTitle').textContent = 'ID ALREADY MINTED';
-                mintButton.classList.add('disabled-button');
-                mintButton.disabled = true;
-                mintMessage.textContent = 'This chip ID has already been minted.';
-            } else {
-                document.getElementById('chipIdDisplay').textContent = chipId;
-                mintButton.classList.remove('disabled-button');
-                mintButton.disabled = false;
-                mintMessage.textContent = '';
-            }
-        } catch (error) {
-            console.error("Error handling chip ID:", error);
-            updateStatus('Error handling chip ID: ' + error.message);
-        }
-    } else {
-        document.getElementById('invitationTitle').textContent = 'YOU WERE NOT INVITED';
-        mintButton.classList.add('disabled-button');
-        mintButton.disabled = true;
-        mintMessage.textContent = 'You have not tapped in';
     }
 }
 
