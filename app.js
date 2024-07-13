@@ -729,6 +729,7 @@ async function connectWallet() {
     }
 }
 
+
 async function disconnectWallet() {
     console.log("Disconnecting wallet...");
     updateStatus('Wallet disconnected');
@@ -831,10 +832,18 @@ async function registerChip() {
     updateStatus('Registering chip...');
     const chipIdToRegister = document.getElementById('chipIdRegister').value;
     try {
+        // Retrieve contract owner
         const owner = await contract.methods.owner().call();
+        console.log("Contract owner:", owner);
+        console.log("Current user:", userAccount);
+
+        // Check if current user is the contract owner
         if (userAccount.toLowerCase() !== owner.toLowerCase()) {
+            console.log("Invalid sender: Only the contract owner can register chips.");
             throw new Error("Only the contract owner can register chips.");
         }
+
+        // Register chip
         await contract.methods.registerChip(chipIdToRegister).send({ from: userAccount });
         console.log("Chip registered successfully");
         updateStatus('Chip registered successfully');
@@ -843,6 +852,7 @@ async function registerChip() {
         updateStatus('Failed to register chip: ' + error.message);
     }
 }
+
 
 
 async function mintNFT() {
