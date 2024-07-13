@@ -729,7 +729,6 @@ async function connectWallet() {
     }
 }
 
-
 async function disconnectWallet() {
     console.log("Disconnecting wallet...");
     updateStatus('Wallet disconnected');
@@ -816,6 +815,7 @@ async function checkIfAdmin() {
             if (userAccount.toLowerCase() === owner.toLowerCase()) {
                 console.log("User is admin");
                 document.getElementById('adminSection').style.display = 'block';
+                await displayRegisteredChips();
             } else {
                 console.log("User is not admin");
             }
@@ -824,6 +824,42 @@ async function checkIfAdmin() {
         }
     } catch (error) {
         console.error("Error checking admin status:", error);
+    }
+}
+
+async function getRegisteredChips() {
+    try {
+        const totalSupply = await contract.methods.totalSupply().call();
+        let registeredChips = [];
+        for (let i = 1; i <= totalSupply; i++) {
+            const chipId = await contract.methods.tokenByIndex(i).call();
+            const tokenId = await contract.methods.chipToTokenId(chipId).call();
+            const tokenIdMinted = await contract.methods.tokenIdMinted(tokenId).call();
+            registeredChips.push({ chipId, tokenId, minted: tokenIdMinted });
+        }
+        return registeredChips;
+    } catch (error) {
+        console.error("Error fetching registered chips:", error);
+        return [];
+    }
+}
+
+async function displayRegisteredChips() {
+    const adminSection = document.getElementById('adminSection');
+    const chipsList = document.getElementById('chipsList');
+    try {
+        const registeredChips = await getRegisteredChips();
+        chipsList.innerHTML = ''; // Clear previous entries
+        registeredChips.forEach(chip => {
+            const chipEntry = document.createElement('div');
+            chipEntry.innerHTML = `
+                <div>Chip ID: ${chip.chipId} - Token ID: ${chip.tokenId} - Minted: ${chip.minted ? 'Yes' : 'No'}</div>
+            `;
+            chipsList.appendChild(chipEntry);
+        });
+    } catch (error) {
+        console.error("Error displaying registered chips:", error);
+        adminSection.innerHTML = 'Failed to load registered chips.';
     }
 }
 
@@ -839,14 +875,12 @@ async function registerChip() {
         await contract.methods.registerChip(chipIdToRegister).send({ from: userAccount });
         console.log("Chip registered successfully:", chipIdToRegister);
         updateStatus('Chip registered successfully');
+        await displayRegisteredChips(); // Update list after registering a new chip
     } catch (error) {
         console.error("Error registering chip:", error);
         updateStatus('Failed to register chip: ' + error.message);
     }
 }
-
-
-
 
 async function mintNFT() {
     console.log("Attempting to mint NFT...");
@@ -896,9 +930,6 @@ async function mintNFT() {
     }
 }
 
-
-
-
 async function handleChipId() {
     const mintButton = document.getElementById('mintNFT');
     const mintMessage = document.getElementById('mintMessage');
@@ -944,7 +975,6 @@ async function handleChipId() {
         mintMessage.textContent = 'You have not tapped in';
     }
 }
-
 
 function updateStatus(message) {
     console.log("Status update:", message);
