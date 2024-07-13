@@ -666,6 +666,7 @@ const CONTRACT_ABI = [
 	}
 ];
 
+
 const BASE_SEPOLIA_CHAIN_ID = '84532'; // Chain ID for Base Sepolia
 const BASE_SEPOLIA_PARAMS = {
     chainId: '0x14CC4', // Chain ID in hex (84532 in decimal)
@@ -828,14 +829,21 @@ async function checkIfAdmin() {
 
 async function getRegisteredChips() {
     try {
-        const totalSupply = await contract.methods.totalSupply().call();
-        let registeredChips = [];
-        for (let i = 1; i <= totalSupply; i++) {
-            const chipId = await contract.methods.tokenByIndex(i).call();
+        const registeredChips = [];
+
+        // Fetch past ChipRegistered events
+        const events = await contract.getPastEvents('ChipRegistered', {
+            fromBlock: 0,
+            toBlock: 'latest'
+        });
+
+        for (const event of events) {
+            const chipId = event.returnValues.chipId;
             const tokenId = await contract.methods.chipToTokenId(chipId).call();
             const tokenIdMinted = await contract.methods.tokenIdMinted(tokenId).call();
             registeredChips.push({ chipId, tokenId, minted: tokenIdMinted });
         }
+
         return registeredChips;
     } catch (error) {
         console.error("Error fetching registered chips:", error);
@@ -844,7 +852,6 @@ async function getRegisteredChips() {
 }
 
 async function displayRegisteredChips() {
-    const adminSection = document.getElementById('adminSection');
     const chipsList = document.getElementById('chipsList');
     try {
         const registeredChips = await getRegisteredChips();
@@ -858,7 +865,7 @@ async function displayRegisteredChips() {
         });
     } catch (error) {
         console.error("Error displaying registered chips:", error);
-        adminSection.innerHTML = 'Failed to load registered chips.';
+        document.getElementById('adminSection').innerHTML = 'Failed to load registered chips.';
     }
 }
 
@@ -868,6 +875,8 @@ async function registerChip() {
     const chipIdToRegister = document.getElementById('chipIdRegister').value;
     try {
         const owner = await contract.methods.owner().call();
+        console.log("Contract owner:", owner);
+        console.log("Current user:", userAccount);
         if (userAccount.toLowerCase() !== owner.toLowerCase()) {
             throw new Error("Only the contract owner can register chips.");
         }
@@ -984,3 +993,4 @@ function updateStatus(message) {
 }
 
 window.addEventListener('load', init);
+
