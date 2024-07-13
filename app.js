@@ -855,7 +855,7 @@ async function mintNFT() {
         console.log("Token ID for chip:", tokenId);
 
         // Adjusted check for a valid token ID
-        if (tokenId && parseInt(tokenId, 10) !== 0) {
+        if (tokenId && tokenId !== '0') {
             console.log("Chip ID already minted");
             updateStatus('Chip ID already minted');
             document.getElementById('invitationTitle').textContent = 'ID ALREADY MINTED';
@@ -878,6 +878,7 @@ async function mintNFT() {
     }
 }
 
+
 async function handleChipId() {
     const mintButton = document.getElementById('mintNFT');
     const mintMessage = document.getElementById('mintMessage');
@@ -888,7 +889,7 @@ async function handleChipId() {
             console.log("Token ID for chip:", tokenId);
 
             // Adjusted check for a valid token ID
-            if (tokenId && parseInt(tokenId, 10) !== 0) {
+            if (tokenId && tokenId !== '0') {
                 document.getElementById('invitationTitle').textContent = 'ID ALREADY MINTED';
                 mintButton.classList.add('disabled-button');
                 mintButton.disabled = true;
