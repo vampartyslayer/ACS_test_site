@@ -765,6 +765,19 @@ async function disconnectWallet() {
     document.getElementById('addBaseSepolia').style.display = 'none';
 }
 
+async function addBaseSepoliaNetwork() {
+    try {
+        await ethereum.request({
+            method: 'wallet_addEthereumChain',
+            params: [BASE_SEPOLIA_PARAMS],
+        });
+        updateStatus('Base Sepolia network added. Please switch to it.');
+    } catch (error) {
+        updateStatus('Failed to add Base Sepolia network: ' + error.message);
+        console.error('Error adding Base Sepolia network:', error);
+    }
+}
+
 async function checkIfAdmin() {
     console.log("Checking if user is admin...");
     try {
