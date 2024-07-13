@@ -854,8 +854,9 @@ async function mintNFT() {
         const tokenId = await contract.methods.chipToTokenId(chipId).call();
         console.log("Token ID for chip:", tokenId);
 
-        // Adjusted check for a valid token ID
-        if (tokenId && tokenId !== '0') {
+        // Check if token ID exists and if it has been minted
+        const tokenIdMinted = await contract.methods.tokenIdMinted(tokenId).call();
+        if (tokenId !== '0' && tokenIdMinted) {
             console.log("Chip ID already minted");
             updateStatus('Chip ID already minted');
             document.getElementById('invitationTitle').textContent = 'ID ALREADY MINTED';
@@ -888,8 +889,9 @@ async function handleChipId() {
             const tokenId = await contract.methods.chipToTokenId(chipId).call();
             console.log("Token ID for chip:", tokenId);
 
-            // Adjusted check for a valid token ID
-            if (tokenId && tokenId !== '0') {
+            // Check if token ID exists and if it has been minted
+            const tokenIdMinted = await contract.methods.tokenIdMinted(tokenId).call();
+            if (tokenId !== '0' && tokenIdMinted) {
                 document.getElementById('invitationTitle').textContent = 'ID ALREADY MINTED';
                 mintButton.classList.add('disabled-button');
                 mintButton.disabled = true;
