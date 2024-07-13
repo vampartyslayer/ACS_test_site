@@ -854,9 +854,19 @@ async function mintNFT() {
         const tokenId = await contract.methods.chipToTokenId(chipId).call();
         console.log("Token ID for chip:", tokenId);
 
-        // Check if token ID exists and if it has been minted
+        // Ensure tokenId is valid
+        if (tokenId == 0) {
+            console.log("Chip ID not registered");
+            updateStatus('Chip ID not registered');
+            document.getElementById('invitationTitle').textContent = 'CHIP NOT REGISTERED';
+            return;
+        }
+
+        // Check if token ID has been minted
         const tokenIdMinted = await contract.methods.tokenIdMinted(tokenId).call();
-        if (tokenId !== '0' && tokenIdMinted) {
+        console.log("Token ID Minted Status:", tokenIdMinted);
+
+        if (tokenIdMinted) {
             console.log("Chip ID already minted");
             updateStatus('Chip ID already minted');
             document.getElementById('invitationTitle').textContent = 'ID ALREADY MINTED';
@@ -880,6 +890,7 @@ async function mintNFT() {
 }
 
 
+
 async function handleChipId() {
     const mintButton = document.getElementById('mintNFT');
     const mintMessage = document.getElementById('mintMessage');
@@ -889,9 +900,21 @@ async function handleChipId() {
             const tokenId = await contract.methods.chipToTokenId(chipId).call();
             console.log("Token ID for chip:", tokenId);
 
-            // Check if token ID exists and if it has been minted
+            // Ensure tokenId is valid
+            if (tokenId == 0) {
+                console.log("Chip ID not registered");
+                document.getElementById('invitationTitle').textContent = 'CHIP NOT REGISTERED';
+                mintButton.classList.add('disabled-button');
+                mintButton.disabled = true;
+                mintMessage.textContent = 'This chip ID is not registered.';
+                return;
+            }
+
+            // Check if token ID has been minted
             const tokenIdMinted = await contract.methods.tokenIdMinted(tokenId).call();
-            if (tokenId !== '0' && tokenIdMinted) {
+            console.log("Token ID Minted Status:", tokenIdMinted);
+
+            if (tokenIdMinted) {
                 document.getElementById('invitationTitle').textContent = 'ID ALREADY MINTED';
                 mintButton.classList.add('disabled-button');
                 mintButton.disabled = true;
@@ -913,6 +936,7 @@ async function handleChipId() {
         mintMessage.textContent = 'You have not tapped in';
     }
 }
+
 
 function updateStatus(message) {
     console.log("Status update:", message);
