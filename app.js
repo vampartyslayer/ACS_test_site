@@ -668,29 +668,6 @@ const CONTRACT_ABI = [
 
 
 
-let web3;
-let contract;
-let userAccount;
-let chipId;
-
-const CONTRACT_ADDRESS = '0x05742B249a116b57Ba0469086B5D68fF0e042Bf6';
-const CONTRACT_ABI = [
-    // Contract ABI
-];
-
-const BASE_SEPOLIA_CHAIN_ID = '84532'; // Chain ID for Base Sepolia
-const BASE_SEPOLIA_PARAMS = {
-    chainId: '0x14CC4', // Chain ID in hex (84532 in decimal)
-    chainName: 'Base Sepolia',
-    nativeCurrency: {
-        name: 'Sepolia ETH',
-        symbol: 'ETH',
-        decimals: 18
-    },
-    rpcUrls: ['https://sepolia.base.org'],
-    blockExplorerUrls: ['https://sepolia-explorer.base.org']
-};
-
 async function init() {
     console.log("Initializing...");
     if (typeof window.ethereum !== 'undefined') {
