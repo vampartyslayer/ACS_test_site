@@ -667,6 +667,7 @@ const CONTRACT_ABI = [
 ];
 
 
+
 let web3;
 let contract;
 let userAccount;
@@ -929,4 +930,5 @@ function updateStatus(message) {
 }
 
 window.addEventListener('load', init);
+
 
