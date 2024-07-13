@@ -865,14 +865,29 @@ async function displayRegisteredChips() {
 async function registerChip() {
     console.log("Attempting to register chip...");
     updateStatus('Registering chip...');
-    const chipIdToRegister = document.getElementById('chipIdRegister').value;
+    const chipIdToRegister = document.getElementById('chipIdRegister').value.trim(); // Trim any leading/trailing spaces
+    if (!chipIdToRegister) {
+        updateStatus('Chip ID cannot be empty.');
+        return;
+    }
     try {
         const owner = await contract.methods.owner().call();
         console.log("Contract owner:", owner);
         console.log("Current user:", userAccount);
+
+        // Ensure correct case sensitivity
         if (userAccount.toLowerCase() !== owner.toLowerCase()) {
             throw new Error("Only the contract owner can register chips.");
         }
+
+        // Ensure correct network
+        const networkId = await web3.eth.net.getId();
+        console.log("Current network ID:", networkId);
+        if (parseInt(networkId, 10) !== parseInt(BASE_SEPOLIA_CHAIN_ID, 10)) {
+            throw new Error("Please switch to the Base Sepolia network.");
+        }
+
+        // Send the transaction
         await contract.methods.registerChip(chipIdToRegister).send({ from: userAccount });
         console.log("Chip registered successfully:", chipIdToRegister);
         updateStatus('Chip registered successfully');
@@ -882,6 +897,7 @@ async function registerChip() {
         updateStatus('Failed to register chip: ' + error.message);
     }
 }
+
 
 async function mintNFT() {
     console.log("Attempting to mint NFT...");
@@ -930,6 +946,7 @@ async function mintNFT() {
         updateStatus('Failed to mint NFT: ' + error.message);
     }
 }
+
 
 async function handleChipId() {
     const mintButton = document.getElementById('mintNFT');
