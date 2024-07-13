@@ -831,6 +831,10 @@ async function registerChip() {
     updateStatus('Registering chip...');
     const chipIdToRegister = document.getElementById('chipIdRegister').value;
     try {
+        const owner = await contract.methods.owner().call();
+        if (userAccount.toLowerCase() !== owner.toLowerCase()) {
+            throw new Error("Only the contract owner can register chips.");
+        }
         await contract.methods.registerChip(chipIdToRegister).send({ from: userAccount });
         console.log("Chip registered successfully");
         updateStatus('Chip registered successfully');
@@ -839,6 +843,7 @@ async function registerChip() {
         updateStatus('Failed to register chip: ' + error.message);
     }
 }
+
 
 async function mintNFT() {
     console.log("Attempting to mint NFT...");
@@ -850,11 +855,10 @@ async function mintNFT() {
         return;
     }
     try {
-        console.log("Checking if chip ID is already minted:", chipId);
+        console.log("Checking if chip ID is registered and not minted:", chipId);
         const tokenId = await contract.methods.chipToTokenId(chipId).call();
         console.log("Token ID for chip:", tokenId);
 
-        // Ensure tokenId is valid
         if (tokenId == 0) {
             console.log("Chip ID not registered");
             updateStatus('Chip ID not registered');
@@ -862,7 +866,6 @@ async function mintNFT() {
             return;
         }
 
-        // Check if token ID has been minted
         const tokenIdMinted = await contract.methods.tokenIdMinted(tokenId).call();
         console.log("Token ID Minted Status:", tokenIdMinted);
 
