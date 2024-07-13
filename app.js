@@ -667,6 +667,7 @@ const CONTRACT_ABI = [
 ];
 
 
+
 const BASE_SEPOLIA_CHAIN_ID = '84532'; // Chain ID for Base Sepolia
 const BASE_SEPOLIA_PARAMS = {
     chainId: '0x14CC4', // Chain ID in hex (84532 in decimal)
@@ -743,7 +744,8 @@ async function connectWallet() {
             document.getElementById('connectWallet').style.display = 'none';
             document.getElementById('disconnectWallet').style.display = 'block';
             document.getElementById('userSection').style.display = 'block';
-            checkIfAdmin();
+            await checkIfAdmin();
+            await handleChipId();
         } catch (error) {
             console.error('Detailed error:', error);
             updateStatus('Failed to connect wallet: ' + error.message);
@@ -909,7 +911,11 @@ async function mintNFT() {
             return;
         }
 
-        await contract.methods.mintNFT(chipId).send({ from: userAccount })
+        // Checking the gas estimation
+        const gasEstimate = await contract.methods.mintNFT(chipId).estimateGas({ from: userAccount });
+        console.log("Estimated Gas:", gasEstimate);
+
+        await contract.methods.mintNFT(chipId).send({ from: userAccount, gas: gasEstimate })
             .on('transactionHash', function(hash) {
                 console.log("Transaction hash:", hash);
             })
@@ -924,6 +930,52 @@ async function mintNFT() {
     } catch (error) {
         console.error("Error minting NFT:", error);
         updateStatus('Failed to mint NFT: ' + error.message);
+    }
+}
+
+async function handleChipId() {
+    const mintButton = document.getElementById('mintNFT');
+    const mintMessage = document.getElementById('mintMessage');
+    if (chipId) {
+        console.log("Handling chip ID:", chipId);
+        try {
+            const tokenId = await contract.methods.chipToTokenId(chipId).call();
+            console.log("Token ID for chip:", tokenId);
+
+            // Ensure tokenId is valid
+            if (tokenId == 0) {
+                console.log("Chip ID not registered");
+                document.getElementById('invitationTitle').textContent = 'CHIP NOT REGISTERED';
+                mintButton.classList.add('disabled-button');
+                mintButton.disabled = true;
+                mintMessage.textContent = 'This chip ID is not registered.';
+                return;
+            }
+
+            // Check if token ID has been minted
+            const tokenIdMinted = await contract.methods.tokenIdMinted(tokenId).call();
+            console.log("Token ID Minted Status:", tokenIdMinted);
+
+            if (tokenIdMinted) {
+                document.getElementById('invitationTitle').textContent = 'ID ALREADY MINTED';
+                mintButton.classList.add('disabled-button');
+                mintButton.disabled = true;
+                mintMessage.textContent = 'This chip ID has already been minted.';
+            } else {
+                document.getElementById('chipIdDisplay').textContent = chipId;
+                mintButton.classList.remove('disabled-button');
+                mintButton.disabled = false;
+                mintMessage.textContent = '';
+            }
+        } catch (error) {
+            console.error("Error handling chip ID:", error);
+            updateStatus('Error handling chip ID: ' + error.message);
+        }
+    } else {
+        document.getElementById('invitationTitle').textContent = 'YOU WERE NOT INVITED';
+        mintButton.classList.add('disabled-button');
+        mintButton.disabled = true;
+        mintMessage.textContent = 'You have not tapped in';
     }
 }
 
