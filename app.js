@@ -899,6 +899,7 @@ async function registerChip() {
 }
 
 
+
 async function mintNFT() {
     console.log("Attempting to mint NFT...");
     updateStatus('Minting NFT...');
@@ -946,6 +947,7 @@ async function mintNFT() {
         updateStatus('Failed to mint NFT: ' + error.message);
     }
 }
+
 
 
 async function handleChipId() {
