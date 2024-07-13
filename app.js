@@ -667,6 +667,18 @@ const CONTRACT_ABI = [
 ];
 
 
+const BASE_SEPOLIA_CHAIN_ID = '84532'; // Chain ID for Base Sepolia
+const BASE_SEPOLIA_PARAMS = {
+    chainId: '0x14CC4', // Chain ID in hex (84532 in decimal)
+    chainName: 'Base Sepolia',
+    nativeCurrency: {
+        name: 'Sepolia ETH',
+        symbol: 'ETH',
+        decimals: 18
+    },
+    rpcUrls: ['https://sepolia.base.org'],
+    blockExplorerUrls: ['https://sepolia-explorer.base.org']
+};
 
 async function init() {
     console.log("Initializing...");
@@ -851,10 +863,18 @@ async function registerChip() {
             throw new Error("Please switch to the Base Sepolia network.");
         }
 
-        await contract.methods.registerChip(chipIdToRegister).send({ from: userAccount });
-        console.log("Chip registered successfully:", chipIdToRegister);
-        updateStatus('Chip registered successfully');
-        await displayRegisteredChips(); // Update list after registering a new chip
+        await contract.methods.registerChip(chipIdToRegister).send({ from: userAccount })
+            .on('transactionHash', function(hash) {
+                console.log("Transaction hash:", hash);
+            })
+            .on('receipt', function(receipt) {
+                console.log("Transaction receipt:", receipt);
+                updateStatus('Chip registered successfully');
+            })
+            .on('error', function(error, receipt) {
+                console.error("Transaction error:", error);
+                updateStatus('Failed to register chip: ' + error.message);
+            });
     } catch (error) {
         console.error("Error registering chip:", error);
         updateStatus('Failed to register chip: ' + error.message);
@@ -907,5 +927,3 @@ function updateStatus(message) {
 }
 
 window.addEventListener('load', init);
-
-
