@@ -667,7 +667,6 @@ const CONTRACT_ABI = [
 ];
 
 
-
 const BASE_SEPOLIA_CHAIN_ID = '84532'; // Chain ID for Base Sepolia
 const BASE_SEPOLIA_PARAMS = {
     chainId: '0x14CC4', // Chain ID in hex (84532 in decimal)
@@ -833,11 +832,9 @@ async function getRegisteredChips() {
         const registeredChips = [];
         const totalSupply = await contract.methods.totalSupply().call();
         for (let i = 1; i <= totalSupply; i++) {
-            // This assumes you have a way to map tokenId to chipId
-            const tokenId = i;
-            const chipId = await contract.methods.chipToTokenId(tokenId).call();
-            const tokenIdMinted = await contract.methods.tokenIdMinted(tokenId).call();
-            registeredChips.push({ chipId, tokenId, minted: tokenIdMinted });
+            const chipId = await contract.methods.chipToTokenId(i).call();
+            const tokenIdMinted = await contract.methods.tokenIdMinted(i).call();
+            registeredChips.push({ chipId, tokenId: i, minted: tokenIdMinted });
         }
         return registeredChips;
     } catch (error) {
