@@ -666,8 +666,6 @@ const CONTRACT_ABI = [
 	}
 ];
 
-
-
 const BASE_SEPOLIA_CHAIN_ID = '84532'; // Chain ID for Base Sepolia
 const BASE_SEPOLIA_PARAMS = {
     chainId: '0x14CC4', // Chain ID in hex (84532 in decimal)
@@ -692,10 +690,6 @@ async function init() {
         document.getElementById('registerChip').addEventListener('click', registerChip);
         document.getElementById('mintNFT').addEventListener('click', mintNFT);
         document.getElementById('addBaseSepolia').addEventListener('click', addBaseSepoliaNetwork);
-
-        // Initialize contract here
-        contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
-        console.log("Contract object created:", contract);
 
         const urlParams = new URLSearchParams(window.location.search);
         chipId = urlParams.get('chipId');
@@ -833,15 +827,16 @@ async function getRegisteredChips() {
         const registeredChips = [];
         const totalSupply = await contract.methods.totalSupply().call();
         for (let i = 1; i <= totalSupply; i++) {
-            let chipId = "Unknown";
+            let chipId = null;
             for (let key in contract.methods.chipToTokenId) {
-                if (contract.methods.chipToTokenId[key].call() == i) {
+                const tokenId = await contract.methods.chipToTokenId(key).call();
+                if (tokenId == i) {
                     chipId = key;
                     break;
                 }
             }
             const tokenIdMinted = await contract.methods.tokenIdMinted(i).call();
-            registeredChips.push({ chipId, tokenId: i, minted: tokenIdMinted });
+            registeredChips.push({ chipId: chipId || "Unknown", tokenId: i, minted: tokenIdMinted });
         }
         return registeredChips;
     } catch (error) {
