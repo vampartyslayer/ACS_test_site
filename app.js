@@ -666,7 +666,6 @@ const CONTRACT_ABI = [
 	}
 ];
 
-
 const BASE_SEPOLIA_CHAIN_ID = '84532'; // Chain ID for Base Sepolia
 const BASE_SEPOLIA_PARAMS = {
     chainId: '0x14CC4', // Chain ID in hex (84532 in decimal)
@@ -909,7 +908,11 @@ async function mintNFT() {
             return;
         }
 
-        await contract.methods.mintNFT(chipId).send({ from: userAccount })
+        // Checking the gas estimation
+        const gasEstimate = await contract.methods.mintNFT(chipId).estimateGas({ from: userAccount });
+        console.log("Estimated Gas:", gasEstimate);
+
+        await contract.methods.mintNFT(chipId).send({ from: userAccount, gas: gasEstimate })
             .on('transactionHash', function(hash) {
                 console.log("Transaction hash:", hash);
             })
