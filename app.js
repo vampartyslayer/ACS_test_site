@@ -833,7 +833,13 @@ async function getRegisteredChips() {
         const registeredChips = [];
         const totalSupply = await contract.methods.totalSupply().call();
         for (let i = 1; i <= totalSupply; i++) {
-            const chipId = await contract.methods.chipToTokenId(i).call();
+            let chipId = "Unknown";
+            for (let key in contract.methods.chipToTokenId) {
+                if (contract.methods.chipToTokenId[key].call() == i) {
+                    chipId = key;
+                    break;
+                }
+            }
             const tokenIdMinted = await contract.methods.tokenIdMinted(i).call();
             registeredChips.push({ chipId, tokenId: i, minted: tokenIdMinted });
         }
@@ -898,8 +904,6 @@ async function registerChip() {
     }
 }
 
-
-
 async function mintNFT() {
     console.log("Attempting to mint NFT...");
     updateStatus('Minting NFT...');
@@ -947,8 +951,6 @@ async function mintNFT() {
         updateStatus('Failed to mint NFT: ' + error.message);
     }
 }
-
-
 
 async function handleChipId() {
     const mintButton = document.getElementById('mintNFT');
