@@ -909,9 +909,18 @@ async function mintNFT() {
             return;
         }
 
-        await contract.methods.mintNFT(chipId).send({ from: userAccount });
-        console.log("NFT minted successfully");
-        updateStatus('NFT minted successfully!');
+        await contract.methods.mintNFT(chipId).send({ from: userAccount })
+            .on('transactionHash', function(hash) {
+                console.log("Transaction hash:", hash);
+            })
+            .on('receipt', function(receipt) {
+                console.log("Transaction receipt:", receipt);
+                updateStatus('NFT minted successfully!');
+            })
+            .on('error', function(error, receipt) {
+                console.error("Transaction error:", error);
+                updateStatus('Failed to mint NFT: ' + error.message);
+            });
     } catch (error) {
         console.error("Error minting NFT:", error);
         updateStatus('Failed to mint NFT: ' + error.message);
