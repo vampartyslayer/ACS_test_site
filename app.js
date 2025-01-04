@@ -48,42 +48,71 @@ const CONTRACT_ABI = [
 
 // Function to check if the connected wallet is the admin
 async function checkIfAdmin() {
+    console.log("Checking admin status...");
     try {
+        // Verify contract is initialized
+        if (!contract || !contract.methods) {
+            console.error("Contract not initialized");
+            return false;
+        }
+
+        // Verify user account is connected
+        if (!userAccount) {
+            console.error("No user account connected");
+            return false;
+        }
+
+        // Get contract owner
         const owner = await contract.methods.owner().call();
-        return userAccount.toLowerCase() === owner.toLowerCase();
+        console.log("Contract owner:", owner);
+        console.log("Current user:", userAccount);
+
+        // Compare addresses (case-insensitive)
+        const isAdmin = userAccount.toLowerCase() === owner.toLowerCase();
+        console.log("Is admin:", isAdmin);
+
+        // Update UI based on admin status
+        document.getElementById('adminSection').style.display = isAdmin ? 'block' : 'none';
+        
+        return isAdmin;
     } catch (error) {
-        console.error("Error checking admin status:", error);
+        console.error("Error in checkIfAdmin:", error);
         return false;
     }
 }
 
 // Function to connect the wallet
 async function connectWallet() {
-    console.log("Attempting to connect wallet...");
-    if (typeof window.ethereum !== 'undefined') {
-        try {
-            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-            userAccount = accounts[0];
-            console.log("Wallet connected:", userAccount);
-            updateStatus('Wallet connected: ' + userAccount);
-            document.getElementById('connectWallet').style.display = 'none';
-            document.getElementById('disconnectWallet').style.display = 'block';
-            document.getElementById('userSection').style.display = 'block';
-
-            // Check if the connected wallet is the admin
-            const isAdmin = await checkIfAdmin();
-            if (isAdmin) {
-                document.getElementById('adminSection').style.display = 'block';
-                await displayRegisteredChips();
-            }
-
-            await handleChipId();
-        } catch (error) {
-            console.error('Detailed error:', error);
-            updateStatus('Failed to connect wallet: ' + error.message);
+    console.log("Connecting wallet...");
+    try {
+        // Ensure Web3 is initialized
+        if (!web3) {
+            web3 = new Web3(window.ethereum);
         }
-    } else {
-        updateStatus('MetaMask is not installed. Please install it to connect your wallet.');
+
+        // Request account access
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        userAccount = accounts[0];
+        console.log("Connected account:", userAccount);
+
+        // Initialize contract if needed
+        if (!contract) {
+            contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
+        }
+
+        // Update UI
+        document.getElementById('connectWallet').style.display = 'none';
+        document.getElementById('disconnectWallet').style.display = 'block';
+        
+        // Check admin status
+        const isAdmin = await checkIfAdmin();
+        console.log("Admin check complete:", isAdmin);
+
+        // Handle rest of connection flow
+        await handleChipId();
+    } catch (error) {
+        console.error("Wallet connection error:", error);
+        updateStatus('Failed to connect wallet: ' + error.message);
     }
 }
 
@@ -245,6 +274,15 @@ async function init() {
         console.log("No Ethereum object found");
         updateStatus('Please install MetaMask!');
     }
+}
+
+// Add event listener for network changes
+if (window.ethereum) {
+    window.ethereum.on('accountsChanged', async (accounts) => {
+        console.log("Account changed, rechecking admin status");
+        userAccount = accounts[0];
+        await checkIfAdmin();
+    });
 }
 
 window.addEventListener('load', init);
