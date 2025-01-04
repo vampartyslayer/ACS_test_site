@@ -46,29 +46,21 @@ const CONTRACT_ABI = [
     }
 ];
 
+const ADMIN_ADDRESS = '0x1705280ae174a96bac66d3b10caee15a19c61eba';
+
 // Function to check if the connected wallet is the admin
 async function checkIfAdmin() {
     console.log("Checking admin status...");
     try {
-        // Verify contract is initialized
-        if (!contract || !contract.methods) {
-            console.error("Contract not initialized");
-            return false;
-        }
-
-        // Verify user account is connected
         if (!userAccount) {
             console.error("No user account connected");
             return false;
         }
 
-        // Get contract owner
-        const owner = await contract.methods.owner().call();
-        console.log("Contract owner:", owner);
+        // Compare with hardcoded admin address
+        const isAdmin = userAccount.toLowerCase() === ADMIN_ADDRESS.toLowerCase();
         console.log("Current user:", userAccount);
-
-        // Compare addresses (case-insensitive)
-        const isAdmin = userAccount.toLowerCase() === owner.toLowerCase();
+        console.log("Admin address:", ADMIN_ADDRESS);
         console.log("Is admin:", isAdmin);
 
         // Update UI based on admin status
@@ -85,30 +77,21 @@ async function checkIfAdmin() {
 async function connectWallet() {
     console.log("Connecting wallet...");
     try {
-        // Ensure Web3 is initialized
-        if (!web3) {
-            web3 = new Web3(window.ethereum);
-        }
-
-        // Request account access
         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
         userAccount = accounts[0];
         console.log("Connected account:", userAccount);
-
-        // Initialize contract if needed
-        if (!contract) {
-            contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
-        }
 
         // Update UI
         document.getElementById('connectWallet').style.display = 'none';
         document.getElementById('disconnectWallet').style.display = 'block';
         
-        // Check admin status
+        // Check admin status first
         const isAdmin = await checkIfAdmin();
         console.log("Admin check complete:", isAdmin);
 
-        // Handle rest of connection flow
+        // Only show user section if not admin
+        document.getElementById('userSection').style.display = isAdmin ? 'none' : 'block';
+
         await handleChipId();
     } catch (error) {
         console.error("Wallet connection error:", error);
