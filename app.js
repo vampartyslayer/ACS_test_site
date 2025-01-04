@@ -930,4 +930,78 @@ async function addBaseSepoliaNetwork() {
     }
 }
 
+async function getRegisteredChips() {
+    try {
+        const registeredChips = [];
+        const totalSupply = await contract.methods.totalSupply().call();
+        
+        for (let i = 1; i <= totalSupply; i++) {
+            let chipId = null;
+            // Iterate through all registered chips
+            const tokenIdMinted = await contract.methods.tokenIdMinted(i).call();
+            
+            // Find chipId for this token
+            // Note: This is inefficient but works for demo
+            for (let key in contract.methods.chipToTokenId) {
+                const tokenId = await contract.methods.chipToTokenId(key).call();
+                if (tokenId == i) {
+                    chipId = key;
+                    break;
+                }
+            }
+            
+            registeredChips.push({
+                chipId: chipId || "Unknown",
+                tokenId: i,
+                minted: tokenIdMinted
+            });
+        }
+        return registeredChips;
+    } catch (error) {
+        console.error("Error fetching chips:", error);
+        return [];
+    }
+}
+
+async function displayRegisteredChips() {
+    const chipsListDiv = document.getElementById('chipsList');
+    try {
+        const chips = await getRegisteredChips();
+        
+        // Create table
+        const table = document.createElement('table');
+        table.className = 'chips-table';
+        
+        // Add header
+        const header = `
+            <tr>
+                <th>Chip ID</th>
+                <th>Token ID</th>
+                <th>Status</th>
+            </tr>
+        `;
+        
+        // Add rows
+        const rows = chips.map(chip => `
+            <tr>
+                <td>${chip.chipId}</td>
+                <td>${chip.tokenId}</td>
+                <td class="${chip.minted ? 'status-minted' : 'status-unminted'}">
+                    ${chip.minted ? 'Minted' : 'Not Minted'}
+                </td>
+            </tr>
+        `).join('');
+        
+        table.innerHTML = header + rows;
+        
+        // Clear and update display
+        chipsListDiv.innerHTML = '';
+        chipsListDiv.appendChild(table);
+        
+    } catch (error) {
+        console.error("Error displaying chips:", error);
+        chipsListDiv.innerHTML = '<p>Error loading registered chips</p>';
+    }
+}
+
 window.addEventListener('load', init);
