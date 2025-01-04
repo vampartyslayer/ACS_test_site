@@ -4,6 +4,19 @@ let userAccount;
 let chipId;
 
 const CONTRACT_ADDRESS = '0x05742B249a116b57Ba0469086B5D68fF0e042Bf6';
+const BASE_SEPOLIA_CHAIN_ID = '84532';
+const BASE_SEPOLIA_PARAMS = {
+    chainId: '0x14CC4',
+    chainName: 'Base Sepolia',
+    nativeCurrency: {
+        name: 'ETH',
+        symbol: 'ETH',
+        decimals: 18
+    },
+    rpcUrls: ['https://sepolia.base.org'],
+    blockExplorerUrls: ['https://sepolia-explorer.base.org']
+};
+
 const CONTRACT_ABI = [
     {
         "inputs": [
@@ -43,6 +56,34 @@ const CONTRACT_ABI = [
         ],
         "name": "ERC721IncorrectOwner",
         "type": "error"
+    },
+    {
+        "inputs": [],
+        "name": "totalSupply",
+        "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [{"internalType": "string", "name": "", "type": "string"}],
+        "name": "chipToTokenId",
+        "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+        "name": "tokenIdMinted",
+        "outputs": [{"internalType": "bool", "name": "", "type": "bool"}],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [{"internalType": "string", "name": "chipId", "type": "string"}],
+        "name": "mintNFT",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
     }
 ];
 
@@ -266,6 +307,45 @@ if (window.ethereum) {
         userAccount = accounts[0];
         await checkIfAdmin();
     });
+}
+
+async function disconnectWallet() {
+    userAccount = null;
+    document.getElementById('connectWallet').style.display = 'block';
+    document.getElementById('disconnectWallet').style.display = 'none';
+    document.getElementById('adminSection').style.display = 'none';
+    document.getElementById('userSection').style.display = 'none';
+    updateStatus('Wallet disconnected');
+}
+
+async function registerChip() {
+    if (!userAccount || !contract) return;
+    const chipIdToRegister = document.getElementById('chipIdRegister').value;
+    if (!chipIdToRegister) {
+        updateStatus('Please enter a chip ID');
+        return;
+    }
+    try {
+        await contract.methods.registerChip(chipIdToRegister)
+            .send({ from: userAccount })
+            .on('receipt', () => {
+                updateStatus('Chip registered successfully');
+            });
+    } catch (error) {
+        updateStatus('Failed to register chip: ' + error.message);
+    }
+}
+
+async function addBaseSepoliaNetwork() {
+    try {
+        await window.ethereum.request({
+            method: 'wallet_addEthereumChain',
+            params: [BASE_SEPOLIA_PARAMS]
+        });
+        updateStatus('Base Sepolia network added');
+    } catch (error) {
+        updateStatus('Failed to add network: ' + error.message);
+    }
 }
 
 window.addEventListener('load', init);
