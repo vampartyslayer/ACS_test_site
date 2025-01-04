@@ -57,7 +57,14 @@
         button:hover {
             background-color: #ddd;
         }
-        .admin-section, .user-section {
+        .admin-section {
+            display: none;
+            margin-top: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .user-section {
             display: none;
             margin-top: 20px;
         }
@@ -108,17 +115,19 @@
             width: 100%;
             margin-top: 20px;
             border-collapse: collapse;
+            background: #111;
+            color: white;
         }
 
         .chips-table th, .chips-table td {
             padding: 12px;
             text-align: left;
-            border: 1px solid #333;
+            border: 1px solid #444;
         }
 
         .chips-table th {
             background-color: #222;
-            color: white;
+            font-weight: bold;
         }
 
         .status-minted {

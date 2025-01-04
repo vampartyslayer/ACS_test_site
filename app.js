@@ -564,7 +564,7 @@ const CONTRACT_ABI = [
 	},
 	{
 		"inputs": [],
-		"name": "owner",
+			"name": "owner",
 		"outputs": [
 			{
 				"internalType": "address",
@@ -963,36 +963,84 @@ async function getRegisteredChips() {
 
 // Update displayRegisteredChips function
 async function displayRegisteredChips() {
+    console.log("Starting displayRegisteredChips");
     const chipsListDiv = document.getElementById('chipsList');
+    
+    if (!chipsListDiv) {
+        console.error("chipsList element not found");
+        return;
+    }
+
     try {
+        console.log("Fetching registered chips...");
         const chips = await getRegisteredChips();
+        console.log("Fetched chips:", chips);
         
-        const tableHTML = `
-            <table class="chips-table">
-                <thead>
-                    <tr>
-                        <th>Token ID</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${chips.map(chip => `
-                        <tr>
-                            <td>${chip.tokenId}</td>
-                            <td class="${chip.minted ? 'status-minted' : 'status-unminted'}">
-                                ${chip.minted ? 'Minted' : 'Available'}
-                            </td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>
+        // Clear existing content
+        chipsListDiv.innerHTML = '';
+        
+        // Create table element
+        const table = document.createElement('table');
+        table.className = 'chips-table';
+        table.style.display = 'table'; // Force table display
+        
+        // Add header
+        const thead = document.createElement('thead');
+        thead.innerHTML = `
+            <tr>
+                <th>Token ID</th>
+                <th>Status</th>
+            </tr>
         `;
+        table.appendChild(thead);
         
-        chipsListDiv.innerHTML = tableHTML;
+        // Add body
+        const tbody = document.createElement('tbody');
+        chips.forEach(chip => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${chip.tokenId}</td>
+                <td class="${chip.minted ? 'status-minted' : 'status-unminted'}">
+                    ${chip.minted ? 'Minted' : 'Available'}
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+        
+        // Append table
+        chipsListDiv.appendChild(table);
+        console.log("Table rendered:", table);
+        
+        // Force display of admin section
+        document.getElementById('adminSection').style.display = 'block';
         
     } catch (error) {
         console.error("Error displaying chips:", error);
         chipsListDiv.innerHTML = '<p>Error loading registered chips</p>';
+    }
+}
+
+// Call display function after wallet connection
+async function connectWallet() {
+    console.log("Connecting wallet...");
+    try {
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        userAccount = accounts[0];
+        console.log("Connected account:", userAccount);
+        
+        document.getElementById('connectWallet').style.display = 'none';
+        document.getElementById('disconnectWallet').style.display = 'block';
+        
+        const isAdmin = await checkIfAdmin();
+        if (isAdmin) {
+            console.log("Admin detected, displaying chips table");
+            await displayRegisteredChips();
+        }
+        
+    } catch (error) {
+        console.error("Wallet connection error:", error);
+        updateStatus('Failed to connect wallet: ' + error.message);
     }
 }
 
