@@ -732,6 +732,29 @@ async function connectWallet() {
     }
 }
 
+// Add check minted status function
+async function checkMintedStatus(chipId) {
+    try {
+        const tokenId = await contract.methods.chipToTokenId(chipId).call();
+        console.log("Checking token ID:", tokenId);
+        
+        if (tokenId == 0) {
+            throw new Error('Chip not registered');
+        }
+        
+        const isMinted = await contract.methods.tokenIdMinted(tokenId).call();
+        console.log("Minting status:", isMinted);
+        
+        return {
+            tokenId: tokenId,
+            isMinted: isMinted
+        };
+    } catch (error) {
+        console.error("Error checking mint status:", error);
+        throw error;
+    }
+}
+
 // Function to handle the chip ID
 async function handleChipId() {
     const mintButton = document.getElementById('mintNFT');
@@ -809,8 +832,8 @@ async function ensureCorrectNetwork() {
 
 // Update mintNFT function
 async function mintNFT() {
-    console.log("Attempting to mint NFT...");
-    updateStatus('Minting NFT...');
+    console.log("Starting mint process...");
+    updateStatus('Checking mint status...');
     
     if (!chipId) {
         updateStatus('No chip ID detected');
@@ -818,28 +841,26 @@ async function mintNFT() {
     }
 
     try {
-        // Ensure correct network first
+        // Check minting status first
+        const status = await checkMintedStatus(chipId);
+        
+        if (status.isMinted) {
+            updateStatus('This chip has already been minted');
+            document.getElementById('mintNFT').classList.add('disabled-button');
+            document.getElementById('mintNFT').disabled = true;
+            return;
+        }
+
+        // Ensure correct network
         const networkValid = await ensureCorrectNetwork();
         if (!networkValid) {
             throw new Error('Please switch to Base Sepolia network');
         }
 
-        const tokenId = await contract.methods.chipToTokenId(chipId).call();
-        console.log("Token ID for chip:", tokenId);
-
-        if (tokenId == 0) {
-            throw new Error('Chip not registered');
-        }
-
-        const tokenIdMinted = await contract.methods.tokenIdMinted(tokenId).call();
-        if (tokenIdMinted) {
-            throw new Error('Token already minted');
-        }
-
+        // Proceed with minting
         const gasEstimate = await contract.methods.mintNFT(chipId).estimateGas({
             from: userAccount
         });
-        console.log("Estimated Gas:", gasEstimate);
 
         await contract.methods.mintNFT(chipId)
             .send({
@@ -847,20 +868,22 @@ async function mintNFT() {
                 gas: Math.round(gasEstimate * 1.2)
             })
             .on('transactionHash', (hash) => {
-                console.log("Transaction hash:", hash);
+                console.log("Minting transaction:", hash);
                 updateStatus('Minting in progress...');
             })
             .on('receipt', (receipt) => {
-                console.log("Transaction receipt:", receipt);
+                console.log("Mint successful:", receipt);
                 updateStatus('NFT minted successfully!');
+                document.getElementById('mintNFT').classList.add('disabled-button');
+                document.getElementById('mintNFT').disabled = true;
             })
-            .on('error', (error, receipt) => {
+            .on('error', (error) => {
                 throw error;
             });
 
     } catch (error) {
-        console.error("Error minting NFT:", error);
-        updateStatus('Failed to mint NFT: ' + error.message);
+        console.error("Minting failed:", error);
+        updateStatus('Minting failed: ' + error.message);
     }
 }
 
