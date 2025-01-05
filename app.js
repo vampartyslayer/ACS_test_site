@@ -753,12 +753,11 @@ async function checkMintedStatus(chipId) {
 async function handleChipId() {
     const mintButton = document.getElementById('mintNFT');
     const mintMessage = document.getElementById('mintMessage');
-    const mintedStatus = document.getElementById('mintedStatus');
     const invitationTitle = document.getElementById('invitationTitle');
+    const mintedStatus = document.getElementById('mintedStatus');
 
     if (!chipId) {
         invitationTitle.textContent = 'YOU WERE NOT INVITED';
-        mintedStatus.style.display = 'none';
         mintButton.classList.add('disabled-button');
         mintButton.disabled = true;
         mintMessage.textContent = 'No chip detected';
@@ -767,9 +766,10 @@ async function handleChipId() {
 
     try {
         const tokenId = await contract.methods.chipToTokenId(chipId).call();
+        console.log("Token ID for chip:", tokenId);
+
         if (tokenId == 0) {
             invitationTitle.textContent = 'CHIP NOT REGISTERED';
-            mintedStatus.style.display = 'none';
             mintButton.classList.add('disabled-button');
             mintButton.disabled = true;
             mintMessage.textContent = 'This chip is not registered';
@@ -777,17 +777,21 @@ async function handleChipId() {
         }
 
         const tokenIdMinted = await contract.methods.tokenIdMinted(tokenId).call();
+        console.log("Token ID Minted Status:", tokenIdMinted);
+
         if (tokenIdMinted) {
-            invitationTitle.textContent = 'NFT STATUS';
-            mintedStatus.textContent = 'ALREADY MINTED';
+            const owner = await contract.methods.ownerOf(tokenId).call();
+            invitationTitle.textContent = 'NFT ALREADY CLAIMED';
+            mintedStatus.innerHTML = `
+                Token ID: ${tokenId}<br>
+                Owned by: ${owner.slice(0,6)}...${owner.slice(-4)}
+            `;
             mintedStatus.classList.add('minted');
-            mintedStatus.style.display = 'block';
             mintButton.classList.add('disabled-button');
             mintButton.disabled = true;
-            mintMessage.textContent = 'This NFT has already been claimed';
         } else {
             invitationTitle.textContent = 'YOU ARE INVITED';
-            mintedStatus.style.display = 'none';
+            mintedStatus.textContent = `Token ID: ${tokenId}`;
             mintButton.classList.remove('disabled-button');
             mintButton.disabled = false;
             mintMessage.textContent = 'Ready to mint';

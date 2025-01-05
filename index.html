@@ -9,17 +9,15 @@
             font-family: 'Helvetica Neue', Arial, sans-serif;
             margin: 0;
             padding: 0;
-            background: #f4f4f4;
+            background: #000;
+            color: #fff;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
             text-align: center;
-            background: #000;
-            color: #fff;
         }
         .container {
-            text-align: center;
             max-width: 800px;
             padding: 40px;
         }
@@ -29,10 +27,21 @@
             letter-spacing: 2px;
             font-weight: 900;
         }
-        p {
+        .token-info {
             font-size: 1.5em;
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+        }
+        .owner-info {
+            font-size: 1.2em;
+            color: #4CAF50;
             margin: 10px 0;
-            letter-spacing: 1px;
+        }
+        .status-message {
+            font-size: 1.5em;
+            margin: 20px 0;
             font-weight: 500;
         }
         .button-container {
@@ -40,6 +49,7 @@
             justify-content: center;
             gap: 20px;
             flex-wrap: wrap;
+            margin: 20px 0;
         }
         button {
             background-color: #fff;
@@ -47,151 +57,81 @@
             color: #000;
             padding: 15px 30px;
             font-size: 1em;
-            margin: 20px 10px;
             cursor: pointer;
             border-radius: 5px;
             font-weight: 700;
             text-transform: uppercase;
-            transition: background-color 0.3s;
+            transition: all 0.3s;
         }
-        button:hover {
+        button:hover:not(.disabled-button) {
             background-color: #ddd;
-        }
-        .admin-section {
-            display: none;
-            margin-top: 20px;
-            background: rgba(0, 0, 0, 0.8);
-            padding: 20px;
-            border-radius: 8px;
-        }
-        .user-section {
-            display: none;
-            margin-top: 20px;
-        }
-        .chip-id-display {
-            font-weight: bold;
+            transform: translateY(-2px);
         }
         .disabled-button {
             background-color: #666;
             cursor: not-allowed;
+            opacity: 0.7;
         }
-        .bottom-button-container {
-            display: flex;
-            justify-content: center;
-            margin-top: 20px;
-        }
-        @media (max-width: 768px) {
-            .container {
-                padding: 20px;
-            }
-            h1 {
-                font-size: 2.5em;
-            }
-            p {
-                font-size: 1.2em;
-            }
-            button {
-                padding: 10px 20px;
-                font-size: 0.9em;
-            }
-        }
-        @media (max-width: 480px) {
-            .container {
-                width: 90%;
-                padding: 10px;
-            }
-            h1 {
-                font-size: 2em;
-            }
-            p {
-                font-size: 1em;
-            }
-            button {
-                padding: 8px 16px;
-                font-size: 0.8em;
-            }
+        .admin-section {
+            display: none;
+            margin-top: 40px;
+            padding: 20px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
         }
         .chips-table {
             width: 100%;
             margin-top: 20px;
             border-collapse: collapse;
-            background: #111;
-            color: white;
         }
-
         .chips-table th, .chips-table td {
             padding: 12px;
             text-align: left;
-            border: 1px solid #444;
+            border: 1px solid #333;
         }
-
         .chips-table th {
-            background-color: #222;
-            font-weight: bold;
+            background: #222;
         }
-
         .status-minted {
             color: #4CAF50;
-            font-weight: bold;
         }
-
         .status-unminted {
             color: #FFA726;
-            font-weight: bold;
-        }
-
-        .minted-status {
-            font-size: 2em;
-            color: #FF4444;
-            margin: 20px 0;
-            font-weight: bold;
-            letter-spacing: 2px;
-            display: none;
-        }
-
-        .minted {
-            display: block;
-            animation: fadeIn 0.5s ease-in;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1 id="invitationTitle">YOU ARE INVITED</h1>
-        <div id="mintedStatus" class="minted-status"></div>
-        <p>Experimentation makes ideas tangible</p>
-        <p>Innovation beats fear of failure</p>
-        <p>Nothing is perfect the first time</p>
-        <p>Join us</p>
+        <div id="tokenInfo" class="token-info"></div>
+        <div id="ownerInfo" class="owner-info"></div>
+        <div id="statusMessage" class="status-message">
+            <p>Experimentation makes ideas tangible</p>
+            <p>Innovation beats fear of failure</p>
+            <p>Nothing is perfect the first time</p>
+            <p>Join us</p>
+        </div>
         <div class="button-container">
             <button id="connectWallet">Connect Wallet</button>
-            <button id="addBaseSepolia" style="display:none;">Make sure you are on Base Sepolia</button>
+            <button id="addBaseSepolia" style="display:none;">Switch to Base Sepolia</button>
         </div>
-
+        
         <div id="adminSection" class="admin-section">
-            <h2>Admin Section</h2>
-            <input type="text" id="chipIdRegister" placeholder="Chip ID to register">
+            <h2>Admin Dashboard</h2>
+            <input type="text" id="chipIdRegister" placeholder="Enter Chip ID">
             <button id="registerChip">Register Chip</button>
-            <div id="chipsList">
-                <!-- Registered chips will be displayed here -->
-            </div>
+            <div id="chipsList"></div>
         </div>
 
         <div id="userSection" class="user-section">
-            <h2>Mint Your NFT</h2>
-            <p>Chip ID: <span id="chipIdDisplay" class="chip-id-display"></span></p>
+            <p>Chip ID: <span id="chipIdDisplay"></span></p>
             <button id="mintNFT">Mint NFT</button>
             <p id="mintMessage"></p>
         </div>
 
         <p id="status"></p>
 
-        <div class="bottom-button-container">
+        <div class="button-container">
             <button id="disconnectWallet" style="display:none;">Disconnect Wallet</button>
         </div>
     </div>
