@@ -685,20 +685,14 @@ const ADMIN_ADDRESS = '0x1705280ae174a96bac66d3b10caee15a19c61eba';
 async function checkIfAdmin() {
     console.log("Checking admin status...");
     try {
-        if (!userAccount) {
-            console.error("No user account connected");
-            return false;
-        }
-
-        // Compare with hardcoded admin address
         const isAdmin = userAccount.toLowerCase() === ADMIN_ADDRESS.toLowerCase();
-        console.log("Current user:", userAccount);
-        console.log("Admin address:", ADMIN_ADDRESS);
         console.log("Is admin:", isAdmin);
 
-        // Update UI based on admin status
-        document.getElementById('adminSection').style.display = isAdmin ? 'block' : 'none';
-        
+        if (isAdmin) {
+            document.getElementById('adminSection').style.display = 'block';
+            await displayAdminChips();
+        }
+
         return isAdmin;
     } catch (error) {
         console.error("Error in checkIfAdmin:", error);
@@ -755,50 +749,52 @@ async function checkMintedStatus(chipId) {
     }
 }
 
-// Function to handle the chip ID
+// Update handleChipId function to use new elements
 async function handleChipId() {
     const mintButton = document.getElementById('mintNFT');
     const mintMessage = document.getElementById('mintMessage');
-    if (chipId) {
-        console.log("Handling chip ID:", chipId);
-        try {
-            const tokenId = await contract.methods.chipToTokenId(chipId).call();
-            console.log("Token ID for chip:", tokenId);
+    const mintedStatus = document.getElementById('mintedStatus');
+    const invitationTitle = document.getElementById('invitationTitle');
 
-            // Ensure tokenId is valid
-            if (tokenId == 0) {
-                console.log("Chip ID not registered");
-                document.getElementById('invitationTitle').textContent = 'CHIP NOT REGISTERED';
-                mintButton.classList.add('disabled-button');
-                mintButton.disabled = true;
-                mintMessage.textContent = 'This chip ID is not registered.';
-                return;
-            }
-
-            // Check if token ID has been minted
-            const tokenIdMinted = await contract.methods.tokenIdMinted(tokenId).call();
-            console.log("Token ID Minted Status:", tokenIdMinted);
-
-            if (tokenIdMinted) {
-                document.getElementById('invitationTitle').textContent = 'ID ALREADY MINTED';
-                mintButton.classList.add('disabled-button');
-                mintButton.disabled = true;
-                mintMessage.textContent = 'This chip ID has already been minted.';
-            } else {
-                document.getElementById('chipIdDisplay').textContent = chipId;
-                mintButton.classList.remove('disabled-button');
-                mintButton.disabled = false;
-                mintMessage.textContent = '';
-            }
-        } catch (error) {
-            console.error("Error handling chip ID:", error);
-            updateStatus('Error handling chip ID: ' + error.message);
-        }
-    } else {
-        document.getElementById('invitationTitle').textContent = 'YOU WERE NOT INVITED';
+    if (!chipId) {
+        invitationTitle.textContent = 'YOU WERE NOT INVITED';
+        mintedStatus.style.display = 'none';
         mintButton.classList.add('disabled-button');
         mintButton.disabled = true;
-        mintMessage.textContent = 'You have not tapped in';
+        mintMessage.textContent = 'No chip detected';
+        return;
+    }
+
+    try {
+        const tokenId = await contract.methods.chipToTokenId(chipId).call();
+        if (tokenId == 0) {
+            invitationTitle.textContent = 'CHIP NOT REGISTERED';
+            mintedStatus.style.display = 'none';
+            mintButton.classList.add('disabled-button');
+            mintButton.disabled = true;
+            mintMessage.textContent = 'This chip is not registered';
+            return;
+        }
+
+        const tokenIdMinted = await contract.methods.tokenIdMinted(tokenId).call();
+        if (tokenIdMinted) {
+            invitationTitle.textContent = 'NFT STATUS';
+            mintedStatus.textContent = 'ALREADY MINTED';
+            mintedStatus.classList.add('minted');
+            mintedStatus.style.display = 'block';
+            mintButton.classList.add('disabled-button');
+            mintButton.disabled = true;
+            mintMessage.textContent = 'This NFT has already been claimed';
+        } else {
+            invitationTitle.textContent = 'YOU ARE INVITED';
+            mintedStatus.style.display = 'none';
+            mintButton.classList.remove('disabled-button');
+            mintButton.disabled = false;
+            mintMessage.textContent = 'Ready to mint';
+        }
+    } catch (error) {
+        console.error("Error handling chip ID:", error);
+        updateStatus('Error checking chip status: ' + error.message);
     }
 }
 
@@ -1114,6 +1110,49 @@ function setupEventListeners() {
             await displayRegisteredChips();
         })
         .on('error', console.error);
+}
+
+async function displayAdminChips() {
+    const chipsListDiv = document.getElementById('chipsList');
+    try {
+        const totalSupply = await contract.methods.totalSupply().call();
+        console.log("Total supply:", totalSupply);
+        
+        let tableHTML = `
+            <table class="chips-table">
+                <thead>
+                    <tr>
+                        <th>Chip ID</th>
+                        <th>Token ID</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        
+        for (let i = 1; i <= totalSupply; i++) {
+            const tokenIdMinted = await contract.methods.tokenIdMinted(i).call();
+            tableHTML += `
+                <tr>
+                    <td>${chipId || 'N/A'}</td>
+                    <td>${i}</td>
+                    <td class="${tokenIdMinted ? 'status-minted' : 'status-unminted'}">
+                        ${tokenIdMinted ? 'Minted' : 'Available'}
+                    </td>
+                </tr>
+            `;
+        }
+        
+        tableHTML += `
+                </tbody>
+            </table>
+        `;
+        
+        chipsListDiv.innerHTML = tableHTML;
+    } catch (error) {
+        console.error("Error displaying admin chips:", error);
+        chipsListDiv.innerHTML = '<p>Error loading chip data</p>';
+    }
 }
 
 window.addEventListener('load', init);

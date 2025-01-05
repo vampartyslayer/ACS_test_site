@@ -139,11 +139,31 @@
             color: #FFA726;
             font-weight: bold;
         }
+
+        .minted-status {
+            font-size: 2em;
+            color: #FF4444;
+            margin: 20px 0;
+            font-weight: bold;
+            letter-spacing: 2px;
+            display: none;
+        }
+
+        .minted {
+            display: block;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1 id="invitationTitle">YOU ARE INVITED</h1>
+        <div id="mintedStatus" class="minted-status"></div>
         <p>Experimentation makes ideas tangible</p>
         <p>Innovation beats fear of failure</p>
         <p>Nothing is perfect the first time</p>
