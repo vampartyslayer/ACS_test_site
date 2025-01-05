@@ -781,52 +781,53 @@ async function handleChipId() {
 
 // Function to mint NFT
 async function mintNFT() {
-    console.log("Attempting to mint NFT...");
-    updateStatus('Minting NFT...');
+    console.log("Minting NFT...");
     if (!chipId) {
-        console.log("No chip ID available");
-        updateStatus('No chip ID detected. Please tap the NFC tag.');
+        updateStatus('No chip ID detected');
         return;
     }
+
     try {
-        console.log("Minting with chip ID:", chipId);
         const tokenId = await contract.methods.chipToTokenId(chipId).call();
-        console.log("Token ID for chip:", tokenId);
+        console.log("Token ID:", tokenId);
 
         if (tokenId == 0) {
-            console.log("Chip ID not registered");
-            updateStatus('Chip ID not registered');
+            updateStatus('Chip not registered');
             return;
         }
 
-        const tokenIdMinted = await contract.methods.tokenIdMinted(tokenId).call();
-        console.log("Token ID Minted Status:", tokenIdMinted);
-
-        if (tokenIdMinted) {
-            console.log("Chip ID already minted");
-            updateStatus('Chip ID already minted');
+        const isMinted = await contract.methods.tokenIdMinted(tokenId).call();
+        if (isMinted) {
+            updateStatus('Token already minted');
             return;
         }
 
-        // Checking the gas estimation
-        const gasEstimate = await contract.methods.mintNFT(chipId).estimateGas({ from: userAccount });
-        console.log("Estimated Gas:", gasEstimate);
+        const gasEstimate = await contract.methods.mintNFT(chipId).estimateGas({
+            from: userAccount
+        });
 
-        await contract.methods.mintNFT(chipId).send({ from: userAccount, gas: gasEstimate })
-            .on('transactionHash', function(hash) {
+        await contract.methods.mintNFT(chipId)
+            .send({
+                from: userAccount,
+                gas: Math.round(gasEstimate * 1.2) // Add 20% buffer
+            })
+            .on('transactionHash', (hash) => {
                 console.log("Transaction hash:", hash);
+                updateStatus('Minting in progress...');
             })
-            .on('receipt', function(receipt) {
-                console.log("Transaction receipt:", receipt);
+            .on('receipt', async (receipt) => {
+                console.log("Minting successful:", receipt);
                 updateStatus('NFT minted successfully!');
+                await displayRegisteredChips(); // Refresh table
             })
-            .on('error', function(error, receipt) {
-                console.error("Transaction error:", error);
-                updateStatus('Failed to mint NFT: ' + error.message);
+            .on('error', (error) => {
+                console.error("Minting error:", error);
+                updateStatus('Minting failed: ' + error.message);
             });
+
     } catch (error) {
-        console.error("Error minting NFT:", error);
-        updateStatus('Failed to mint NFT: ' + error.message);
+        console.error("Minting error:", error);
+        updateStatus('Minting failed: ' + error.message);
     }
 }
 
@@ -851,6 +852,8 @@ async function init() {
         console.log("Web3 initialized");
 
         contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
+        setupEventListeners();
+        
         console.log("Contract initialized:", contract);
 
         const networkId = await web3.eth.net.getId();
@@ -937,26 +940,26 @@ async function addBaseSepoliaNetwork() {
 // Update getRegisteredChips function
 async function getRegisteredChips() {
     try {
-        const registeredChips = [];
         const totalSupply = await contract.methods.totalSupply().call();
         console.log("Total supply:", totalSupply);
         
-        // Create batch request for efficiency
-        const batch = new web3.BatchRequest();
-        
+        const registeredChips = [];
         for (let i = 1; i <= totalSupply; i++) {
-            const tokenIdMinted = await contract.methods.tokenIdMinted(i).call();
-            const entry = {
-                tokenId: i,
-                minted: tokenIdMinted,
-                chipId: "Loading..."
-            };
-            registeredChips.push(entry);
+            try {
+                const tokenIdMinted = await contract.methods.tokenIdMinted(i).call();
+                registeredChips.push({
+                    tokenId: i,
+                    minted: tokenIdMinted
+                });
+            } catch (error) {
+                console.error(`Error fetching token ${i}:`, error);
+            }
         }
-
+        
+        console.log("Registered chips:", registeredChips);
         return registeredChips;
     } catch (error) {
-        console.error("Error fetching registered chips:", error);
+        console.error("Error in getRegisteredChips:", error);
         return [];
     }
 }
@@ -1046,5 +1049,15 @@ async function connectWallet() {
 
 // Add refresh timer
 setInterval(displayRegisteredChips, 30000); // Refresh every 30 seconds
+
+// Add event listeners for contract events
+function setupEventListeners() {
+    contract.events.Transfer()
+        .on('data', async (event) => {
+            console.log("Transfer event:", event);
+            await displayRegisteredChips();
+        })
+        .on('error', console.error);
+}
 
 window.addEventListener('load', init);
