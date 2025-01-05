@@ -779,55 +779,88 @@ async function handleChipId() {
     }
 }
 
-// Function to mint NFT
+// Add network check and switch function
+async function ensureCorrectNetwork() {
+    try {
+        const chainId = await web3.eth.getChainId();
+        if (chainId !== parseInt(BASE_SEPOLIA_CHAIN_ID)) {
+            console.log("Wrong network, switching to Base Sepolia...");
+            await window.ethereum.request({
+                method: 'wallet_switchEthereumChain',
+                params: [{ chainId: '0x14CC4' }], // Base Sepolia Chain ID in hex
+            });
+            return true;
+        }
+        return true;
+    } catch (error) {
+        if (error.code === 4902) { // Chain not added
+            try {
+                await addBaseSepoliaNetwork();
+                return true;
+            } catch (addError) {
+                console.error("Failed to add network:", addError);
+                return false;
+            }
+        }
+        console.error("Network switch error:", error);
+        return false;
+    }
+}
+
+// Update mintNFT function
 async function mintNFT() {
-    console.log("Minting NFT...");
+    console.log("Attempting to mint NFT...");
+    updateStatus('Minting NFT...');
+    
     if (!chipId) {
         updateStatus('No chip ID detected');
         return;
     }
 
     try {
-        const tokenId = await contract.methods.chipToTokenId(chipId).call();
-        console.log("Token ID:", tokenId);
-
-        if (tokenId == 0) {
-            updateStatus('Chip not registered');
-            return;
+        // Ensure correct network first
+        const networkValid = await ensureCorrectNetwork();
+        if (!networkValid) {
+            throw new Error('Please switch to Base Sepolia network');
         }
 
-        const isMinted = await contract.methods.tokenIdMinted(tokenId).call();
-        if (isMinted) {
-            updateStatus('Token already minted');
-            return;
+        const tokenId = await contract.methods.chipToTokenId(chipId).call();
+        console.log("Token ID for chip:", tokenId);
+
+        if (tokenId == 0) {
+            throw new Error('Chip not registered');
+        }
+
+        const tokenIdMinted = await contract.methods.tokenIdMinted(tokenId).call();
+        if (tokenIdMinted) {
+            throw new Error('Token already minted');
         }
 
         const gasEstimate = await contract.methods.mintNFT(chipId).estimateGas({
             from: userAccount
         });
+        console.log("Estimated Gas:", gasEstimate);
 
         await contract.methods.mintNFT(chipId)
             .send({
                 from: userAccount,
-                gas: Math.round(gasEstimate * 1.2) // Add 20% buffer
+                gas: Math.round(gasEstimate * 1.2)
             })
             .on('transactionHash', (hash) => {
                 console.log("Transaction hash:", hash);
                 updateStatus('Minting in progress...');
             })
-            .on('receipt', async (receipt) => {
-                console.log("Minting successful:", receipt);
+            .on('receipt', (receipt) => {
+                console.log("Transaction receipt:", receipt);
                 updateStatus('NFT minted successfully!');
-                await displayRegisteredChips(); // Refresh table
             })
-            .on('error', (error) => {
-                console.error("Minting error:", error);
-                updateStatus('Minting failed: ' + error.message);
+            .on('error', (error, receipt) => {
+                throw error;
             });
 
     } catch (error) {
-        console.error("Minting error:", error);
-        updateStatus('Minting failed: ' + error.message);
+        console.error("Error minting NFT:", error);
+        updateStatus('Failed to mint NFT: ' + error.message);
     }
 }
 
