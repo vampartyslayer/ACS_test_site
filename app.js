@@ -810,7 +810,7 @@ async function ensureCorrectNetwork() {
             console.log("Wrong network, switching to Base Sepolia...");
             await window.ethereum.request({
                 method: 'wallet_switchEthereumChain',
-                params: [{ chainId: '0x14CC4' }], // Base Sepolia Chain ID in hex
+                params: [{ chainId: '0x14A44' }], // Base Sepolia Chain ID in hex
             });
             return true;
         }
