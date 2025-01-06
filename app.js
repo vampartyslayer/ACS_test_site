@@ -1,9 +1,8 @@
+// Constants and initial setup
 let web3;
 let contract;
 let userAccount;
 let chipId;
-
-
 
 const CONTRACT_ADDRESS = '0x05742B249a116b57Ba0469086B5D68fF0e042Bf6';
 const BASE_SEPOLIA_CHAIN_ID = '84532';
@@ -898,6 +897,7 @@ async function init() {
 
         contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
         setupEventListeners();
+        setupContractListeners();
         
         console.log("Contract initialized:", contract);
 
@@ -1148,4 +1148,68 @@ async function displayAdminChips() {
     }
 }
 
+// Improved handleChipId function with contract interaction
+async function handleChipId() {
+    if (!chipId) return;
+    
+    try {
+        const tokenId = await contract.methods.chipToTokenId(chipId).call();
+        const tokenMinted = await contract.methods.tokenIdMinted(tokenId).call();
+        
+        updateMintingUI(tokenId, tokenMinted);
+    } catch (error) {
+        console.error("Error handling chip:", error);
+        updateStatus('Error checking chip status');
+    }
+}
+
+// Helper function to update UI based on minting status
+function updateMintingUI(tokenId, isMinted) {
+    const mintButton = document.getElementById('mintNFT');
+    const mintMessage = document.getElementById('mintMessage');
+    const title = document.getElementById('invitationTitle');
+    
+    if (tokenId && !isMinted) {
+        title.textContent = 'YOU ARE INVITED';
+        mintButton.disabled = false;
+        mintButton.classList.remove('disabled-button');
+        mintMessage.textContent = 'Ready to mint';
+    } else if (isMinted) {
+        title.textContent = 'ALREADY CLAIMED';
+        mintButton.disabled = true;
+        mintButton.classList.add('disabled-button');
+        mintMessage.textContent = 'This NFT has been claimed';
+    } else {
+        title.textContent = 'NOT INVITED';
+        mintButton.disabled = true;
+        mintButton.classList.add('disabled-button');
+        mintMessage.textContent = 'No valid chip detected';
+    }
+}
+
+// Event listeners setup
+function setupEventListeners() {
+    document.getElementById('connectWallet').addEventListener('click', connectWallet);
+    document.getElementById('disconnectWallet').addEventListener('click', disconnectWallet);
+    document.getElementById('mintNFT').addEventListener('click', mintNFT);
+    document.getElementById('registerChip').addEventListener('click', registerChip);
+    
+    // MetaMask events
+    if (window.ethereum) {
+        window.ethereum.on('accountsChanged', handleAccountChange);
+        window.ethereum.on('chainChanged', handleChainChange);
+    }
+}
+
+// Contract event listeners
+function setupContractListeners() {
+    contract.events.Transfer()
+        .on('data', async (event) => {
+            console.log("Transfer event:", event);
+            await handleChipId();
+        })
+        .on('error', console.error);
+}
+
+// Initialize on page load
 window.addEventListener('load', init);
