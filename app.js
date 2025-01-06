@@ -5,7 +5,7 @@ let userAccount;
 let chipId;
 
 const CONTRACT_ADDRESS = '0x05742B249a116b57Ba0469086B5D68fF0e042Bf6';
-const BASE_SEPOLIA_CHAIN_ID = '84532';
+const BASE_SEPOLIA_CHAIN_ID = '85188';
 const BASE_SEPOLIA_PARAMS = {
     chainId: '0x14CC4',
     chainName: 'Base Sepolia',
