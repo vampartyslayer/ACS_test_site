@@ -3,6 +3,8 @@ let contract;
 let userAccount;
 let chipId;
 
+
+
 const CONTRACT_ADDRESS = '0x05742B249a116b57Ba0469086B5D68fF0e042Bf6';
 const BASE_SEPOLIA_CHAIN_ID = '84532';
 const BASE_SEPOLIA_PARAMS = {
@@ -679,20 +681,22 @@ const CONTRACT_ABI = [
 	}
 ];
 
-const ADMIN_ADDRESS = '0x1705280ae174a96bac66d3b10caee15a19c61eba';
+// Duplicate declaration removed
 
-// Function to check if the connected wallet is the admin
+// Update checkIfAdmin function
 async function checkIfAdmin() {
     console.log("Checking admin status...");
     try {
         const isAdmin = userAccount.toLowerCase() === ADMIN_ADDRESS.toLowerCase();
+        console.log("Current user:", userAccount);
+        console.log("Admin address:", ADMIN_ADDRESS);
         console.log("Is admin:", isAdmin);
-
+        
         if (isAdmin) {
             document.getElementById('adminSection').style.display = 'block';
-            await displayAdminChips();
+            // Additional admin-specific UI updates
         }
-
+        
         return isAdmin;
     } catch (error) {
         console.error("Error in checkIfAdmin:", error);
@@ -726,41 +730,24 @@ async function connectWallet() {
     }
 }
 
-// Add check minted status function
-async function checkMintedStatus(chipId) {
-    try {
-        const tokenId = await contract.methods.chipToTokenId(chipId).call();
-        console.log("Checking token ID:", tokenId);
-        
-        if (tokenId == 0) {
-            throw new Error('Chip not registered');
-        }
-        
-        const isMinted = await contract.methods.tokenIdMinted(tokenId).call();
-        console.log("Minting status:", isMinted);
-        
-        return {
-            tokenId: tokenId,
-            isMinted: isMinted
-        };
-    } catch (error) {
-        console.error("Error checking mint status:", error);
-        throw error;
-    }
-}
+// Add at top with other constants
+const ADMIN_ADDRESS = '0x1705280ae174a96bac66d3b10caee15a19c61eba';
 
-// Update handleChipId function to use new elements
+// Update handleChipId function
 async function handleChipId() {
     const mintButton = document.getElementById('mintNFT');
     const mintMessage = document.getElementById('mintMessage');
     const invitationTitle = document.getElementById('invitationTitle');
-    const mintedStatus = document.getElementById('mintedStatus');
+    const tokenInfo = document.getElementById('tokenInfo');
+    const ownerInfo = document.getElementById('ownerInfo');
 
     if (!chipId) {
         invitationTitle.textContent = 'YOU WERE NOT INVITED';
         mintButton.classList.add('disabled-button');
         mintButton.disabled = true;
         mintMessage.textContent = 'No chip detected';
+        tokenInfo.textContent = '';
+        ownerInfo.textContent = '';
         return;
     }
 
@@ -773,6 +760,8 @@ async function handleChipId() {
             mintButton.classList.add('disabled-button');
             mintButton.disabled = true;
             mintMessage.textContent = 'This chip is not registered';
+            tokenInfo.textContent = '';
+            ownerInfo.textContent = '';
             return;
         }
 
@@ -782,16 +771,15 @@ async function handleChipId() {
         if (tokenIdMinted) {
             const owner = await contract.methods.ownerOf(tokenId).call();
             invitationTitle.textContent = 'NFT ALREADY CLAIMED';
-            mintedStatus.innerHTML = `
-                Token ID: ${tokenId}<br>
-                Owned by: ${owner.slice(0,6)}...${owner.slice(-4)}
-            `;
-            mintedStatus.classList.add('minted');
+            tokenInfo.textContent = `Token ID: ${tokenId}`;
+            ownerInfo.textContent = `Owned by: ${owner.slice(0,6)}...${owner.slice(-4)}`;
             mintButton.classList.add('disabled-button');
             mintButton.disabled = true;
+            mintMessage.textContent = 'This NFT has already been claimed';
         } else {
             invitationTitle.textContent = 'YOU ARE INVITED';
-            mintedStatus.textContent = `Token ID: ${tokenId}`;
+            tokenInfo.textContent = `Token ID: ${tokenId}`;
+            ownerInfo.textContent = '';
             mintButton.classList.remove('disabled-button');
             mintButton.disabled = false;
             mintMessage.textContent = 'Ready to mint';
@@ -802,6 +790,7 @@ async function handleChipId() {
     }
 }
 
+
 // Add network check and switch function
 async function ensureCorrectNetwork() {
     try {
@@ -810,7 +799,7 @@ async function ensureCorrectNetwork() {
             console.log("Wrong network, switching to Base Sepolia...");
             await window.ethereum.request({
                 method: 'wallet_switchEthereumChain',
-                params: [{ chainId: '0x14A44' }], // Base Sepolia Chain ID in hex
+                params: [{ chainId: '0x14CC4' }], // Base Sepolia Chain ID in hex
             });
             return true;
         }
