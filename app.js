@@ -823,43 +823,83 @@ function setupAdminFeatures() {
 }
 
 async function registerChip() {
-    console.log("Attempting to register chip...");
-    updateStatus('Registering chip...');
     const chipIdToRegister = document.getElementById('chipIdRegister').value;
+    console.log('[RegisterChip] Attempting to register chip:', chipIdToRegister);
+    
     try {
-        await contract.methods.registerChip(chipIdToRegister).send({ from: userAccount });
-        console.log("Chip registered successfully");
+        const tx = await contract.methods.registerChip(chipIdToRegister)
+            .send({ from: userAccount });
+        
+        console.log('[RegisterChip] Chip registered successfully:', {
+            chipId: chipIdToRegister,
+            transactionHash: tx.transactionHash
+        });
+        
         updateStatus('Chip registered successfully');
+        updateChipsTable();
+
     } catch (error) {
-        console.error("Error registering chip:", error);
+        console.error('[RegisterChip] Registration failed:', {
+            error: error.message,
+            chipId: chipIdToRegister,
+            stack: error.stack
+        });
         updateStatus('Failed to register chip: ' + error.message);
     }
 }
 
+async function isAdmin() {
+    const contract = await getContract();
+    const owner = await contract.methods.owner().call();
+    return (owner.toLowerCase() === (await web3.eth.getAccounts())[0].toLowerCase());
+}
+
 async function mintNFT() {
-    console.log("Attempting to mint NFT...");
-    updateStatus('Minting NFT...');
+    console.log('[MintNFT] Initiating mint process for chip:', chipId);
     if (!chipId) {
-        console.log("No chip ID available");
-        document.getElementById('invitationTitle').textContent = 'YOU WERE NOT INVITED';
-        updateStatus('You have not tapped in');
+        console.error('[MintNFT] Aborting - No chip ID detected');
+        updateStatus('No chip ID detected');
         return;
     }
+
     try {
-        console.log("Contract methods:", Object.keys(contract.methods));
-        console.log("Minting with chip ID:", chipId);
+        console.log('[MintNFT] Checking chip registration status:', chipId);
         const tokenId = await contract.methods.chipToTokenId(chipId).call();
-        if (tokenId === 0) {
-            console.log("Chip not registered");
-            updateStatus('Chip not registered');
+        console.log('[MintNFT] Retrieved token ID:', tokenId);
+
+        console.log('[MintNFT] Checking mint status for token:', tokenId);
+        const isMinted = await contract.methods.tokenIdMinted(tokenId).call();
+        
+        if (isMinted) {
+            console.warn('[MintNFT] Already minted - Token:', tokenId);
+            updateStatus('This NFT has already been claimed');
             return;
         }
-        await contract.methods.mintNFT(chipId).send({ from: userAccount });
-        console.log("NFT minted successfully");
-        updateStatus('NFT minted successfully');
+
+        console.log('[MintNFT] Initiating blockchain transaction for chip:', chipId);
+        await contract.methods.mintNFT(chipId)
+            .send({ from: userAccount })
+            .on('transactionHash', (hash) => {
+                console.log('[MintNFT] Transaction hash received:', hash);
+                updateStatus('Minting in progress...');
+            })
+            .on('receipt', (receipt) => {
+                console.log('[MintNFT] Transaction confirmed in block:', receipt.blockNumber);
+                updateStatus('NFT minted successfully!');
+                handleChipId();
+            })
+            .on('error', (error) => {
+                console.error('[MintNFT] Transaction error:', error);
+                updateStatus('Transaction failed: ' + error.message);
+            });
+
     } catch (error) {
-        console.error("Error minting NFT:", error);
-        updateStatus('Failed to mint NFT: ' + error.message);
+        console.error('[MintNFT] Critical error during process:', {
+            error: error.message,
+            chipId,
+            stack: error.stack
+        });
+        updateStatus('Minting failed: ' + error.message);
     }
 }
 
@@ -872,20 +912,40 @@ function updateStatus(message) {
 }
 
 async function handleChipId() {
-    const mintButton = document.getElementById('mintNFT');
-    const mintMessage = document.getElementById('mintMessage');
-    const title = document.getElementById('invitationTitle');
+    console.log('[ChipHandler] Processing chip ID from URL');
+    try {
+        const urlParams = new URLSearchParams(window.location.search);
+        chipId = urlParams.get('chipId');
+        
+        if (chipId) {
+            console.log('[ChipHandler] Detected chip ID in URL:', chipId);
+            document.getElementById('chipIdDisplay').textContent = chipId;
+            const mintButton = document.getElementById('mintNFT');
+            const mintMessage = document.getElementById('mintMessage');
+            const title = document.getElementById('invitationTitle');
+            mintButton.disabled = false;
+            mintButton.classList.remove('disabled-button');
+            title.textContent = 'YOU ARE INVITED';
+        } else {
+            console.warn('[ChipHandler] No chip ID found in URL parameters');
+            const mintButton = document.getElementById('mintNFT');
+            const mintMessage = document.getElementById('mintMessage');
+            const title = document.getElementById('invitationTitle');
+            title.textContent = 'YOU WERE NOT INVITED';
+            mintButton.disabled = true;
+            mintButton.classList.add('disabled-button');
+            mintMessage.textContent = 'You have not tapped in';
+        }
 
-    if (chipId) {
-        document.getElementById('chipIdDisplay').textContent = chipId;
-        mintButton.disabled = false;
-        mintButton.classList.remove('disabled-button');
-        title.textContent = 'YOU ARE INVITED';
-    } else {
-        title.textContent = 'YOU WERE NOT INVITED';
-        mintButton.disabled = true;
-        mintButton.classList.add('disabled-button');
-        mintMessage.textContent = 'You have not tapped in';
+        // Existing token checks with added logging
+        const tokenId = await contract.methods.chipToTokenId(chipId).call();
+        console.log('[ChipHandler] Token ID resolution:', { chipId, tokenId });
+        
+    } catch (error) {
+        console.error('[ChipHandler] Error processing chip ID:', {
+            chipId,
+            error: error.message
+        });
     }
 }
 
@@ -918,17 +978,28 @@ function handleAccountChange(accounts) {
 window.addEventListener('load', init);
 
 async function updateChipsTable() {
+    console.log('[ChipsTable] Starting table update');
     try {
         const chipIds = await contract.methods.getAllChipIds().call();
+        console.log('[ChipsTable] Retrieved', chipIds.length, 'chip IDs from contract');
+        
         const chips = await Promise.all(chipIds.map(async (chipId) => {
-            const tokenId = await contract.methods.chipToTokenId(chipId).call();
-            return {
-                chipId: chipId,
-                tokenId: tokenId,
-                isMinted: await contract.methods.tokenIdMinted(tokenId).call(),
-                owner: tokenId > 0 ? await contract.methods.ownerOf(tokenId).call() : null
-            };
+            try {
+                const tokenId = await contract.methods.chipToTokenId(chipId).call();
+                const isMinted = await contract.methods.tokenIdMinted(tokenId).call();
+                const owner = tokenId > 0 ? await contract.methods.ownerOf(tokenId).call() : null;
+                
+                return { chipId, tokenId, isMinted, owner };
+            } catch (error) {
+                console.error('[ChipsTable] Error fetching chip details:', {
+                    chipId,
+                    error: error.message
+                });
+                return null;
+            }
         }));
+
+        console.log('[ChipsTable] Processed', chips.filter(c => c !== null).length, 'valid chips');
         
         const tbody = document.getElementById('chipsTableBody');
         tbody.innerHTML = '';
@@ -952,8 +1023,10 @@ async function updateChipsTable() {
             tbody.innerHTML = '<tr><td colspan="4">No chips registered yet</td></tr>';
         }
     } catch (error) {
-        console.error('Error loading chips:', error);
-        updateStatus('Error loading chip data: ' + error.message);
+        console.error('[ChipsTable] Critical update error:', {
+            error: error.message,
+            stack: error.stack
+        });
     }
 }
 

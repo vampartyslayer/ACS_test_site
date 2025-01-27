@@ -42,11 +42,9 @@ contract ACSMemberShipV1 is ERC721Upgradeable, OwnableUpgradeable {
         uint256 tokenId = chipToTokenId[chipId];
         require(tokenId != 0, "Chip not registered");
         require(!tokenIdMinted[tokenId], "NFT already minted");
-        require(!hasClaimed[msg.sender], "Address already claimed");
-
+        
         _safeMint(msg.sender, tokenId);
         tokenIdMinted[tokenId] = true;
-        hasClaimed[msg.sender] = true;
         
         emit NFTMinted(msg.sender, tokenId, chipId);
     }
