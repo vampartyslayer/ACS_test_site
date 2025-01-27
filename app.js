@@ -832,7 +832,7 @@ function checkUrlForChipId() {
     
     if (chipId && display) {
         display.textContent = chipId;
-        if (userAccount) checkChipStatus();
+        if (userAccount && contract) checkChipStatus();
     }
 }
 
@@ -903,8 +903,8 @@ function shortenAddress(address) {
  *********************/
 async function mintNFT() {
     try {
-        if (!contract?.methods?.mintNFT) {
-            throw new Error('Contract not initialized');
+        if (!contract || !contract.methods || !contract.methods.mintNFT) {
+            throw new Error('Contract not properly initialized');
         }
         
         updateStatus('Minting...');
@@ -926,10 +926,12 @@ async function mintNFT() {
  *********************/
 document.addEventListener('DOMContentLoaded', () => {
     // Validate required elements
-    ['connectWallet', 'mintNFT', 'status', 'walletAddress', 'chipIdDisplay'].forEach(id => {
-        if (!document.getElementById(id)) console.error(`Missing element #${id}`);
+    const requiredElements = ['connectWallet', 'mintNFT', 'status'];
+    requiredElements.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) console.error(`CRITICAL: Missing element #${id}`);
     });
-
+    
     disableMintButton();
     setupEventListeners();
     checkUrlForChipId();
@@ -1155,3 +1157,12 @@ async function checkConnection() {
 
 // Run in browser console after init
 contract.methods.owner().call().then(console.log)
+
+async function connectWallet() {
+    // ... existing connection code ...
+    
+    // Move chip check here after contract init
+    if (chipId) {
+        await checkChipStatus();
+    }
+}
