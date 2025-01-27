@@ -828,20 +828,20 @@ async function addBaseSepoliaNetwork() {
 function checkUrlForChipId() {
     const urlParams = new URLSearchParams(window.location.search);
     chipId = urlParams.get('chipId');
+    const display = document.getElementById('chipIdDisplay');
     
-    if (chipId) {
-        document.getElementById('chipIdDisplay').textContent = chipId;
+    if (chipId && display) {
+        display.textContent = chipId;
         if (userAccount) checkChipStatus();
     }
 }
 
-async function handleChipId() {
-    if (!chipId) return;
-    await checkChipStatus();
-}
-
 async function checkChipStatus() {
     try {
+        if (!contract?.methods?.chipToTokenId) {
+            throw new Error('Contract methods not available');
+        }
+        
         const tokenId = await contract.methods.chipToTokenId(chipId).call();
         const isMinted = await contract.methods.tokenIdMinted(tokenId).call();
         
@@ -854,8 +854,9 @@ async function checkChipStatus() {
             updateStatus('Ready to mint!');
         }
     } catch (error) {
+        console.error('Chip check failed:', error);
+        updateStatus('Chip error: ' + error.message);
         disableMintButton();
-        updateStatus('Invalid chip: ' + error.message);
     }
 }
 
@@ -863,12 +864,14 @@ async function checkChipStatus() {
  *  UI FUNCTIONS
  *********************/
 function setupEventListeners() {
-    document.getElementById('connectWallet').addEventListener('click', connectWallet);
-    document.getElementById('mintNFT').addEventListener('click', mintNFT);
+    const connectBtn = document.getElementById('connectWallet');
+    const mintBtn = document.getElementById('mintNFT');
+    
+    if (connectBtn) connectBtn.addEventListener('click', connectWallet);
+    if (mintBtn) mintBtn.addEventListener('click', mintNFT);
 }
 
 function updateStatus(message) {
-    console.log("Status update:", message);
     const statusElement = document.getElementById('status');
     if (statusElement) {
         statusElement.textContent = message;
@@ -877,14 +880,18 @@ function updateStatus(message) {
 
 function enableMintButton() {
     const btn = document.getElementById('mintNFT');
-    btn.disabled = false;
-    btn.classList.remove('disabled');
+    if (btn) {
+        btn.disabled = false;
+        btn.classList.remove('disabled');
+    }
 }
 
 function disableMintButton() {
     const btn = document.getElementById('mintNFT');
-    btn.disabled = true;
-    btn.classList.add('disabled');
+    if (btn) {
+        btn.disabled = true;
+        btn.classList.add('disabled');
+    }
 }
 
 function shortenAddress(address) {
@@ -896,11 +903,18 @@ function shortenAddress(address) {
  *********************/
 async function mintNFT() {
     try {
+        if (!contract?.methods?.mintNFT) {
+            throw new Error('Contract not initialized');
+        }
+        
         updateStatus('Minting...');
         const receipt = await contract.methods.mintNFT(chipId)
             .send({ from: userAccount });
+        
         console.log('Mint successful:', receipt);
         updateStatus('NFT Minted!');
+        disableMintButton();
+        
     } catch (error) {
         console.error('Mint failed:', error);
         updateStatus('Mint error: ' + error.message);
@@ -911,42 +925,54 @@ async function mintNFT() {
  *  INITIALIZATION
  *********************/
 document.addEventListener('DOMContentLoaded', () => {
-    // Initialize UI state
+    // Validate required elements
+    ['connectWallet', 'mintNFT', 'status', 'walletAddress', 'chipIdDisplay'].forEach(id => {
+        if (!document.getElementById(id)) console.error(`Missing element #${id}`);
+    });
+
     disableMintButton();
     setupEventListeners();
     checkUrlForChipId();
 });
 
-/*********************
- *  WALLET CONNECTION
- *********************/
-async function connectWallet() {
+// Add loading state management
+let isCheckingAdmin = false;
+
+// Add this function to handle URL parameters
+function checkUrlForChipId() {
     try {
-        if (!window.ethereum) throw new Error('Please install MetaMask');
+        const urlParams = new URLSearchParams(window.location.search);
+        chipId = urlParams.get('chipId');
         
-        // Initialize Web3
-        web3 = new Web3(window.ethereum);
-        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        userAccount = accounts[0];
-        
-        // Network validation
-        await validateNetwork();
-        
-        // Initialize contract
-        contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
-        
-        // Update UI
-        document.getElementById('connectWallet').style.display = 'none';
-        document.getElementById('walletAddress').textContent = shortenAddress(userAccount);
-        
-        // Check chip status after connection
         if (chipId) {
-            await checkChipStatus();
+            console.log('[URL] Detected chip ID:', chipId);
+            handleChipId();
         }
-        
     } catch (error) {
-        console.error('Wallet connection failed:', error);
-        updateStatus(`Connection error: ${error.message}`);
+        console.error('[URL] Error parsing chip ID:', error);
+    }
+}
+
+// Update the handleChipId function
+async function handleChipId() {
+    try {
+        console.log('[Chip] Handling chip ID:', chipId);
+        
+        if (!chipId) {
+            console.log('[Chip] No chip ID available');
+            document.getElementById('invitationTitle').textContent = 'YOU WERE NOT INVITED';
+            updateStatus('You have not tapped in');
+            return;
+        }
+
+        const tokenId = await contract.methods.chipToTokenId(chipId).call();
+        console.log('[Chip] Resolved token ID:', tokenId);
+        
+        // Rest of your existing handleChipId logic...
+
+    } catch (error) {
+        console.error('[Chip] Handling error:', error);
+        updateStatus('Error processing chip: ' + error.message);
     }
 }
 
