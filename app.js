@@ -792,25 +792,54 @@ async function handleChipId() {
 
 // Update the initWeb3 function
 async function initWeb3() {
-    try {
-        if (!window.ethereum) throw new Error('No Ethereum provider detected');
-        
-        web3 = new Web3(window.ethereum);
-        await window.ethereum.enable();
-        
-        contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
-        console.log('[Init] Contract methods verified');
-        
-        // Initialize chip handling after contract setup
-        checkUrlForChipId();
-        
-        // Rest of your initialization logic...
-        
-    } catch (error) {
-        console.error('[Init] Critical error:', error);
-        updateStatus('Initialization failed: ' + error.message);
+    if (!window.ethereum) throw new Error('Please install MetaMask');
+    
+    web3 = new Web3(window.ethereum);
+    await window.ethereum.request({ method: 'eth_requestAccounts' });
+    userAccount = (await web3.eth.getAccounts())[0];
+    
+    await validateNetwork();
+    initContract();
+}
+
+function initContract() {
+    contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
+    console.log('[Contract] Methods verified:', Object.keys(contract.methods));
+}
+
+// Network validation
+async function validateNetwork() {
+    const chainId = await web3.eth.getChainId();
+    if (chainId !== BASE_SEPOLIA_CHAIN_ID) {
+        await window.ethereum.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: `0x${BASE_SEPOLIA_CHAIN_ID.toString(16)}` }]
+        });
     }
 }
+
+// URL handling
+async function handleChipIdFromURL() {
+    const urlParams = new URLSearchParams(window.location.search);
+    chipId = urlParams.get('chipId');
+    if (chipId) {
+        console.log('[URL] Found chip ID:', chipId);
+        await checkChipStatus();
+    }
+}
+
+// Event listeners
+function setupEventListeners() {
+    document.getElementById('connectWallet').addEventListener('click', async () => {
+        await initWeb3();
+        updateUI();
+    });
+    
+    document.getElementById('mintNFT').addEventListener('click', mintNFT);
+}
+
+// Start initialization when page loads
+document.addEventListener('DOMContentLoaded', init);
 
 // Add this validation check
 function validateContract() {
@@ -831,8 +860,8 @@ async function getContract() {
 async function init() {
     try {
         await initWeb3();
-        await validateNetwork();
-        await setupEventListeners();
+        await handleChipIdFromURL();
+        setupEventListeners();
         await checkIfAdmin();
     } catch (error) {
         console.error('[Init] Critical initialization error:', error);
@@ -1030,23 +1059,6 @@ function updateStatus(message) {
     if (statusElement) {
         statusElement.textContent = message;
     }
-}
-
-function setupEventListeners() {
-    document.getElementById('connectWallet').addEventListener('click', connectWallet);
-    document.getElementById('disconnectWallet').addEventListener('click', disconnectWallet);
-    document.getElementById('registerChip').addEventListener('click', registerChip);
-    document.getElementById('mintNFT').addEventListener('click', mintNFT);
-    document.getElementById('addBaseSepolia').addEventListener('click', addBaseSepoliaNetwork);
-
-    if (window.ethereum) {
-        window.ethereum.on('accountsChanged', handleAccountChange);
-        window.ethereum.on('chainChanged', () => window.location.reload());
-    }
-
-    contract.events.Transfer()
-        .on('data', handleTransferEvent)
-        .on('error', handleError);
 }
 
 function handleAccountChange(accounts) {
