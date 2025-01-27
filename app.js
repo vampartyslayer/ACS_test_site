@@ -811,18 +811,7 @@ async function addBaseSepoliaNetwork() {
 }
 
 // URL handling
-async function handleChipIdFromURL() {
-    const urlParams = new URLSearchParams(window.location.search);
-    chipId = urlParams.get('chipId');
-    
-    if (chipId) {
-        console.log('[Chip] URL parameter detected:', chipId);
-        await checkChipStatus();
-    } else {
-        console.log('[Chip] No chip ID in URL');
-        updateStatus('Scan a chip to begin');
-    }
-}
+
 
 // Event listeners
 function setupEventListeners() {
@@ -1183,6 +1172,19 @@ async function checkChipStatus() {
         } else {
             updateStatus('Error checking chip: ' + error.message);
         }
+    }
+}
+
+async function handleChipIdFromURL() {
+    const urlParams = new URLSearchParams(window.location.search);
+    chipId = urlParams.get('chipId');
+    
+    if (chipId) {
+        console.log('[Chip] URL parameter detected:', chipId);
+        await checkChipStatus();
+    } else {
+        console.log('[Chip] No chip ID in URL');
+        updateStatus('Scan a chip to begin');
     }
 }
 
