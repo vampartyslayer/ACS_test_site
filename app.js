@@ -675,40 +675,53 @@ const BASE_SEPOLIA_PARAMS = {
     blockExplorerUrls: ['https://sepolia-explorer.base.org']
 };
 
+// Add loading state management
+let isCheckingAdmin = false;
+
 async function init() {
     try {
-        if (window.ethereum) {
-            web3 = new Web3(window.ethereum);
-            await window.ethereum.enable();
+        updateStatus('Connecting...');
+        
+        // 1. Initialize Web3
+        if (!window.ethereum) throw new Error('No Ethereum provider');
+        web3 = new Web3(window.ethereum);
+        
+        // 2. Enable provider
+        await window.ethereum.enable();
+        
+        // 3. Get initial account
+        const accounts = await web3.eth.getAccounts();
+        userAccount = accounts[0];
+        
+        // 4. Network check
+        if (!(await checkNetwork())) return;
+        
+        // 5. Initialize contract
+        contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
+        
+        // 6. Verify contract connection
+        const owner = await contract.methods.owner().call()
+            .catch(() => { throw new Error('Contract connection failed') });
             
-            // Get account first
-            const accounts = await web3.eth.getAccounts();
-            userAccount = accounts[0];
-            
-            // Then check network
-            await checkNetwork();
-            
-            // Initialize contract after account and network
-            contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
-            
-            // Finally check admin status
-            await checkIfAdmin();
-            
-            setupEventListeners();
-            setupContractListeners();
-            const urlParams = new URLSearchParams(window.location.search);
-            chipId = urlParams.get('chipId');
-            handleChipId();
-            
-            const savedAccount = localStorage.getItem('userAccount');
-            if (savedAccount) {
-                userAccount = savedAccount;
-                await connectWallet();
-            }
+        // 7. Check admin status
+        await checkIfAdmin();
+        
+        // 8. Setup listeners
+        setupEventListeners();
+        
+        setupContractListeners();
+        const urlParams = new URLSearchParams(window.location.search);
+        chipId = urlParams.get('chipId');
+        handleChipId();
+        
+        const savedAccount = localStorage.getItem('userAccount');
+        if (savedAccount) {
+            userAccount = savedAccount;
+            await connectWallet();
         }
     } catch (error) {
         console.error("Initialization failed:", error);
-        updateStatus('Connection error - please refresh');
+        updateStatus(`Error: ${error.message || error}`);
     }
 }
 
@@ -764,37 +777,62 @@ async function addBaseSepoliaNetwork() {
     }
 }
 
-const ADMIN_ADDRESS = '0x1705280ae174a96bac66d3b10caee15a19c61eba';
+// const ADMIN_ADDRESS = '0x1705280ae174a96bac66d3b10caee15a19c61eba';
 async function checkIfAdmin() {
+    if (isCheckingAdmin) return;
+    isCheckingAdmin = true;
+    updateStatus('Checking admin status...');
+    
     try {
-        // Ensure we have a connected account first
+        // 1. Ensure account is available
         if (!userAccount) {
             const accounts = await web3.eth.getAccounts();
+            if (!accounts.length) throw new Error('No connected account');
             userAccount = accounts[0];
         }
 
-        // Get contract owner
-        const owner = await contract.methods.owner().call();
-        
-        // Compare addresses
-        const isAdmin = web3.utils.toChecksumAddress(userAccount) === 
-                      web3.utils.toChecksumAddress(owner);
+        // 2. Get owner with timeout
+        const owner = await Promise.race([
+            contract.methods.owner().call(),
+            new Promise((_, reject) => 
+                setTimeout(() => reject('Owner check timeout'), 5000))
+        ]);
 
-        // Update UI based on admin status
+        // 3. Compare addresses safely
+        const isAdmin = web3.utils.toChecksumAddress(userAccount) === 
+                       web3.utils.toChecksumAddress(owner);
+
+        // 4. Update UI
         document.getElementById('adminSection').style.display = isAdmin ? 'block' : 'none';
-        
-        // Only setup refresh if admin
+        updateStatus(isAdmin ? 'Admin mode activated' : 'Connected as user');
+
+        // 5. Setup admin features if needed
         if (isAdmin) {
-            setInterval(updateChipsTable, 30000);
-            updateChipsTable();
+            setupAdminFeatures();
         }
 
         return isAdmin;
     } catch (error) {
         console.error("Admin check failed:", error);
-        updateStatus('Error checking admin status');
+        updateStatus(`Error: ${error.message || error}`);
         return false;
+    } finally {
+        isCheckingAdmin = false;
     }
+}
+
+// New helper function for admin features
+function setupAdminFeatures() {
+    // Clear existing interval
+    if (window.chipsInterval) clearInterval(window.chipsInterval);
+    
+    // Initial update
+    updateChipsTable();
+    
+    // Periodic refresh (every 30 seconds)
+    window.chipsInterval = setInterval(() => {
+        updateChipsTable();
+    }, 30000);
 }
 
 async function registerChip() {
@@ -942,3 +980,21 @@ document.getElementById('registerChip').addEventListener('click', async () => {
     await registerChip();
     await updateChipsTable();
 });
+
+window.ethereum.on('chainChanged', (chainId) => {
+    window.location.reload();
+});
+
+window.ethereum.on('accountsChanged', (accounts) => {
+    userAccount = accounts[0];
+    checkIfAdmin();
+});
+
+async function checkConnection() {
+    try {
+        await web3.eth.net.getId();
+        return true;
+    } catch {
+        return false;
+    }
+}
