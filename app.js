@@ -668,7 +668,7 @@ const CONTRACT_ABI = [
 
 const BASE_SEPOLIA_CHAIN_ID = '84532';
 const BASE_SEPOLIA_PARAMS = {
-    chainId: '0x14CC4',
+    chainId: '0x14A34',
     chainName: 'Base Sepolia',
     nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
     rpcUrls: ['https://sepolia.base.org'],
@@ -686,6 +686,7 @@ async function init() {
         contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
         
         setupEventListeners();
+        setupContractListeners();
         const urlParams = new URLSearchParams(window.location.search);
         chipId = urlParams.get('chipId');
         handleChipId();
@@ -734,10 +735,9 @@ async function disconnectWallet() {
 }
 
 async function checkNetwork() {
-    const networkId = await web3.eth.net.getId();
-    if (networkId.toString() !== BASE_SEPOLIA_CHAIN_ID) {
-        updateStatus('Please switch to Base Sepolia');
-        document.getElementById('addBaseSepolia').style.display = 'block';
+    const chainId = await web3.eth.getChainId();
+    if (chainId !== parseInt(BASE_SEPOLIA_CHAIN_ID)) {
+        // Handle network mismatch
     }
 }
 
@@ -754,25 +754,10 @@ async function addBaseSepoliaNetwork() {
     }
 }
 
+const ADMIN_ADDRESS = '0x1705280ae174a96bac66d3b10caee15a19c61eba';
 async function checkIfAdmin() {
-    console.log("Checking if user is admin...");
-    try {
-        if (contract.methods.owner) {
-            const owner = await contract.methods.owner().call();
-            console.log("Contract owner:", owner);
-            console.log("Current user:", userAccount);
-            if (userAccount.toLowerCase() === owner.toLowerCase()) {
-                console.log("User is admin");
-                document.getElementById('adminSection').style.display = 'block';
-            } else {
-                console.log("User is not admin");
-            }
-        } else {
-            console.log("Owner function not found in the contract");
-        }
-    } catch (error) {
-        console.error("Error checking admin status:", error);
-    }
+    const owner = await contract.methods.owner().call();
+    return userAccount.toLowerCase() === owner.toLowerCase();
 }
 
 async function registerChip() {
@@ -801,13 +786,15 @@ async function mintNFT() {
     try {
         console.log("Contract methods:", Object.keys(contract.methods));
         console.log("Minting with chip ID:", chipId);
-        if (contract.methods.mintNFT) {
-            await contract.methods.mintNFT(chipId).send({ from: userAccount });
-            console.log("NFT minted successfully");
-            updateStatus('NFT minted successfully');
-        } else {
-            throw new Error("mintNFT function not found in the contract");
+        const tokenId = await contract.methods.chipToTokenId(chipId).call();
+        if (tokenId === 0) {
+            console.log("Chip not registered");
+            updateStatus('Chip not registered');
+            return;
         }
+        await contract.methods.mintNFT(chipId).send({ from: userAccount });
+        console.log("NFT minted successfully");
+        updateStatus('NFT minted successfully');
     } catch (error) {
         console.error("Error minting NFT:", error);
         updateStatus('Failed to mint NFT: ' + error.message);
@@ -851,6 +838,10 @@ function setupEventListeners() {
         window.ethereum.on('accountsChanged', handleAccountChange);
         window.ethereum.on('chainChanged', () => window.location.reload());
     }
+
+    contract.events.Transfer()
+        .on('data', handleTransferEvent)
+        .on('error', handleError);
 }
 
 function handleAccountChange(accounts) {
