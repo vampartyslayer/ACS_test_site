@@ -1,8 +1,11 @@
+const contractABI = [/* Paste the entire provided ABI array here */];
+const contractAddress = '0xYourContractAddress'; // Replace with actual address
+
 let web3;
 let contract;
 let userAccount;
 let chipId;
-let contractInitialized = false;
+let isInitialized = false;
 
 const CONTRACT_ADDRESS = '0xfaf77c99E8E7C704b37449DCD08cb3555887cC94';
 const CONTRACT_ABI = [
@@ -759,16 +762,16 @@ async function initWeb3() {
     try {
         if (!window.ethereum) throw new Error('No Ethereum provider detected');
         
-        // Initialize Web3
+        // Initialize Web3 first
         web3 = new Web3(window.ethereum);
-        await window.ethereum.enable();
-        console.log('[Init] Web3 initialized successfully');
-
-        // Initialize contract
-        contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
-        contractInitialized = true;
         
-        console.log('[Init] Contract initialized with methods:', Object.keys(contract.methods));
+        // Request account access
+        await window.ethereum.request({ method: 'eth_requestAccounts' });
+        
+        // Initialize contract after web3
+        contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
+        
+        console.log('[Init] Contract methods:', Object.keys(contract.methods));
         checkUrlForChipId();
     } catch (error) {
         console.error('[Init] Initialization failed:', error);
@@ -785,7 +788,7 @@ function validateContract() {
 
 // Modified getContract with validation
 async function getContract() {
-    if (!contractInitialized) {
+    if (!isInitialized) {
         await initWeb3();
     }
     validateContract();
@@ -863,7 +866,10 @@ async function disconnectWallet() {
 async function checkNetwork() {
     const chainId = await web3.eth.getChainId();
     if (chainId !== parseInt(BASE_SEPOLIA_CHAIN_ID)) {
-        // Handle network mismatch
+        await window.ethereum.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: BASE_SEPOLIA_PARAMS.chainId }]
+        });
     }
 }
 
@@ -1018,40 +1024,50 @@ function updateStatus(message) {
 }
 
 async function handleChipId() {
-    console.log('[ChipHandler] Processing chip ID from URL');
     try {
-        const urlParams = new URLSearchParams(window.location.search);
-        chipId = urlParams.get('chipId');
-        
-        if (chipId) {
-            console.log('[ChipHandler] Detected chip ID in URL:', chipId);
-            document.getElementById('chipIdDisplay').textContent = chipId;
-            const mintButton = document.getElementById('mintNFT');
-            const mintMessage = document.getElementById('mintMessage');
-            const title = document.getElementById('invitationTitle');
-            mintButton.disabled = false;
-            mintButton.classList.remove('disabled-button');
-            title.textContent = 'YOU ARE INVITED';
-        } else {
-            console.warn('[ChipHandler] No chip ID found in URL parameters');
-            const mintButton = document.getElementById('mintNFT');
-            const mintMessage = document.getElementById('mintMessage');
-            const title = document.getElementById('invitationTitle');
-            title.textContent = 'YOU WERE NOT INVITED';
-            mintButton.disabled = true;
-            mintButton.classList.add('disabled-button');
-            mintMessage.textContent = 'You have not tapped in';
+        if (!isInitialized) {
+            await initWeb3();
         }
-
-        // Existing token checks with added logging
-        const tokenId = await contract.methods.chipToTokenId(chipId).call();
-        console.log('[ChipHandler] Token ID resolution:', { chipId, tokenId });
         
+        const contract = await getContract();
+        
+        console.log('[ChipHandler] Processing chip ID from URL');
+        try {
+            const urlParams = new URLSearchParams(window.location.search);
+            chipId = urlParams.get('chipId');
+            
+            if (chipId) {
+                console.log('[ChipHandler] Detected chip ID in URL:', chipId);
+                document.getElementById('chipIdDisplay').textContent = chipId;
+                const mintButton = document.getElementById('mintNFT');
+                const mintMessage = document.getElementById('mintMessage');
+                const title = document.getElementById('invitationTitle');
+                mintButton.disabled = false;
+                mintButton.classList.remove('disabled-button');
+                title.textContent = 'YOU ARE INVITED';
+            } else {
+                console.warn('[ChipHandler] No chip ID found in URL parameters');
+                const mintButton = document.getElementById('mintNFT');
+                const mintMessage = document.getElementById('mintMessage');
+                const title = document.getElementById('invitationTitle');
+                title.textContent = 'YOU WERE NOT INVITED';
+                mintButton.disabled = true;
+                mintButton.classList.add('disabled-button');
+                mintMessage.textContent = 'You have not tapped in';
+            }
+
+            // Existing token checks with added logging
+            const tokenId = await contract.methods.chipToTokenId(chipId).call();
+            console.log('[ChipHandler] Token ID resolution:', { chipId, tokenId });
+            
+        } catch (error) {
+            console.error('[ChipHandler] Error processing chip ID:', {
+                chipId,
+                error: error.message
+            });
+        }
     } catch (error) {
-        console.error('[ChipHandler] Error processing chip ID:', {
-            chipId,
-            error: error.message
-        });
+        console.error('[ChipHandler] Error:', error);
     }
 }
 
@@ -1081,11 +1097,15 @@ function handleAccountChange(accounts) {
     }
 }
 
-window.addEventListener('load', init);
+document.addEventListener('DOMContentLoaded', initWeb3);
 
 async function updateChipsTable() {
-    console.log('[ChipsTable] Starting table update');
     try {
+        // Add null check
+        if (!contract?.methods?.getAllChipIds) {
+            throw new Error('Contract methods not available');
+        }
+        
         const chipIds = await contract.methods.getAllChipIds().call();
         console.log('[ChipsTable] Retrieved', chipIds.length, 'chip IDs from contract');
         
@@ -1129,10 +1149,7 @@ async function updateChipsTable() {
             tbody.innerHTML = '<tr><td colspan="4">No chips registered yet</td></tr>';
         }
     } catch (error) {
-        console.error('[ChipsTable] Critical update error:', {
-            error: error.message,
-            stack: error.stack
-        });
+        console.error('[ChipsTable] Error:', error);
     }
 }
 
