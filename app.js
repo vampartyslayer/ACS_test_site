@@ -792,14 +792,39 @@ async function handleChipId() {
 
 // Update the initWeb3 function
 async function initWeb3() {
-    if (!window.ethereum) throw new Error('Please install MetaMask');
-    
-    web3 = new Web3(window.ethereum);
-    await window.ethereum.request({ method: 'eth_requestAccounts' });
-    userAccount = (await web3.eth.getAccounts())[0];
-    
-    await validateNetwork();
-    initContract();
+    try {
+        // 1. Check for Ethereum provider
+        if (!window.ethereum) {
+            throw new Error('Please install MetaMask or another Ethereum wallet');
+        }
+
+        // 2. Initialize Web3
+        web3 = new Web3(window.ethereum);
+        console.log('[Web3] Instance created');
+
+        // 3. Request account access
+        const accounts = await window.ethereum.request({ 
+            method: 'eth_requestAccounts' 
+        });
+        userAccount = accounts[0];
+        console.log('[Web3] Connected account:', userAccount);
+
+        // 4. Network validation
+        await validateNetwork();
+
+        // 5. Initialize contract after network check
+        contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
+        console.log('[Web3] Contract initialized');
+
+        // 6. Post-initialization setup
+        setupEventListeners();
+        checkUrlForChipId();
+
+    } catch (error) {
+        console.error('[Web3] Initialization failed:', error);
+        updateStatus(`Connection error: ${error.message}`);
+        throw error; // Propagate error for handling
+    }
 }
 
 function initContract() {
@@ -809,13 +834,39 @@ function initContract() {
 
 // Network validation
 async function validateNetwork() {
-    const chainId = await web3.eth.getChainId();
-    if (chainId !== BASE_SEPOLIA_CHAIN_ID) {
-        await window.ethereum.request({
-            method: 'wallet_switchEthereumChain',
-            params: [{ chainId: `0x${BASE_SEPOLIA_CHAIN_ID.toString(16)}` }]
-        });
+    try {
+        const chainId = await web3.eth.getChainId();
+        if (chainId !== BASE_SEPOLIA_CHAIN_ID) {
+            await window.ethereum.request({
+                method: 'wallet_switchEthereumChain',
+                params: [{ chainId: '0x14CC4' }] // Base Sepolia chain ID
+            });
+            console.log('[Network] Switched to Base Sepolia');
+        }
+    } catch (error) {
+        if (error.code === 4902) { // Chain not added
+            await addBaseSepoliaNetwork();
+        }
+        throw new Error('Network error: ' + error.message);
     }
+}
+
+// Add network switching helper
+async function addBaseSepoliaNetwork() {
+    await window.ethereum.request({
+        method: 'wallet_addEthereumChain',
+        params: [{
+            chainId: '0x14CC4',
+            chainName: 'Base Sepolia',
+            nativeCurrency: {
+                name: 'Ether',
+                symbol: 'ETH',
+                decimals: 18
+            },
+            rpcUrls: ['https://sepolia.base.org'],
+            blockExplorerUrls: ['https://sepolia-explorer.base.org']
+        }]
+    });
 }
 
 // URL handling
@@ -839,7 +890,14 @@ function setupEventListeners() {
 }
 
 // Start initialization when page loads
-document.addEventListener('DOMContentLoaded', init);
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        await initWeb3();
+        updateUI(); // Refresh wallet connection status
+    } catch (error) {
+        // Error already handled in initWeb3
+    }
+});
 
 // Add this validation check
 function validateContract() {
@@ -906,21 +964,8 @@ async function checkNetwork() {
     if (chainId !== parseInt(BASE_SEPOLIA_CHAIN_ID)) {
         await window.ethereum.request({
             method: 'wallet_switchEthereumChain',
-            params: [{ chainId: BASE_SEPOLIA_PARAMS.chainId }]
+            params: [BASE_SEPOLIA_PARAMS.chainId]
         });
-    }
-}
-
-async function addBaseSepoliaNetwork() {
-    try {
-        await window.ethereum.request({
-            method: 'wallet_addEthereumChain',
-            params: [BASE_SEPOLIA_PARAMS]
-        });
-        updateStatus('Base Sepolia network added. Please switch to it.');
-        checkNetwork();
-    } catch (error) {
-        updateStatus('Failed to add Base Sepolia network: ' + error.message);
     }
 }
 
