@@ -756,8 +756,20 @@ async function addBaseSepoliaNetwork() {
 
 const ADMIN_ADDRESS = '0x1705280ae174a96bac66d3b10caee15a19c61eba';
 async function checkIfAdmin() {
-    const owner = await contract.methods.owner().call();
-    return userAccount.toLowerCase() === owner.toLowerCase();
+    try {
+        const owner = await contract.methods.owner().call();
+        const isAdmin = userAccount.toLowerCase() === owner.toLowerCase();
+        
+        if (isAdmin) {
+            document.getElementById('adminSection').style.display = 'block';
+            setInterval(updateChipsTable, 30000);
+            updateChipsTable();
+        }
+        return isAdmin;
+    } catch (error) {
+        console.error("Admin check failed:", error);
+        return false;
+    }
 }
 
 async function registerChip() {
@@ -855,21 +867,18 @@ function handleAccountChange(accounts) {
 
 window.addEventListener('load', init);
 
-function updateChipsTable() {
+async function updateChipsTable() {
     try {
-        const chips = [];
-        const totalSupply = await contract.methods.totalSupply().call();
-        for (let i = 1; i <= totalSupply; i++) {
-            const tokenId = await contract.methods.chipToTokenId(i.toString()).call();
-            const isMinted = await contract.methods.tokenIdMinted(i).call();
-            const owner = await contract.methods.ownerOf(tokenId).call();
-            chips.push({
-                chipId: i.toString(),
-                tokenId: tokenId.toString(),
-                isMinted: isMinted,
-                owner: owner
-            });
-        }
+        const chipIds = await contract.methods.getAllChipIds().call();
+        const chips = await Promise.all(chipIds.map(async (chipId) => {
+            const tokenId = await contract.methods.chipToTokenId(chipId).call();
+            return {
+                chipId: chipId,
+                tokenId: tokenId,
+                isMinted: await contract.methods.tokenIdMinted(tokenId).call(),
+                owner: tokenId > 0 ? await contract.methods.ownerOf(tokenId).call() : null
+            };
+        }));
         
         const tbody = document.getElementById('chipsTableBody');
         tbody.innerHTML = '';
@@ -894,7 +903,7 @@ function updateChipsTable() {
         }
     } catch (error) {
         console.error('Error loading chips:', error);
-        tbody.innerHTML = '<tr><td colspan="4">Error loading data</td></tr>';
+        updateStatus('Error loading chip data: ' + error.message);
     }
 }
 
@@ -908,9 +917,3 @@ document.getElementById('registerChip').addEventListener('click', async () => {
     await registerChip();
     await updateChipsTable();
 });
-
-// Add to checkIfAdmin function
-if (isAdmin) {
-    setInterval(updateChipsTable, 30000); // Refresh every 30 seconds
-    updateChipsTable();
-}
