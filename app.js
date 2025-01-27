@@ -2,6 +2,7 @@ let web3;
 let contract;
 let userAccount;
 let chipId;
+let contractInitialized = false;
 
 const CONTRACT_ADDRESS = '0xfaf77c99E8E7C704b37449DCD08cb3555887cC94';
 const CONTRACT_ABI = [
@@ -678,32 +679,56 @@ const BASE_SEPOLIA_PARAMS = {
 // Add loading state management
 let isCheckingAdmin = false;
 
+async function initWeb3() {
+    if (window.ethereum) {
+        try {
+            await window.ethereum.enable();
+            window.web3 = new Web3(window.ethereum);
+            await initializeContract();
+        } catch (error) {
+            console.error('[Init] Web3 initialization failed:', error);
+        }
+    } else {
+        console.error('[Init] No Ethereum provider detected');
+    }
+}
+
+async function initializeContract() {
+    try {
+        const contractAddress = '0xYourContractAddress'; // Replace with actual address
+        const contractABI = [/* Paste your contract ABI here */];
+        
+        contract = new window.web3.eth.Contract(contractABI, contractAddress);
+        contractInitialized = true;
+        console.log('[Init] Contract initialized successfully');
+    } catch (error) {
+        console.error('[Init] Contract initialization failed:', error);
+    }
+}
+
+// Update getContract to ensure initialization
+async function getContract() {
+    if (!contractInitialized) {
+        await initializeContract();
+    }
+    return contract;
+}
+
 async function init() {
     try {
         updateStatus('Connecting...');
         
         // 1. Initialize Web3
-        if (!window.ethereum) throw new Error('No Ethereum provider');
-        web3 = new Web3(window.ethereum);
+        await initWeb3();
         
-        // 2. Enable provider
-        await window.ethereum.enable();
-        
-        // 3. Get initial account
+        // 2. Get initial account
         const accounts = await web3.eth.getAccounts();
         userAccount = accounts[0];
         
         // 4. Network check
         if (!(await checkNetwork())) return;
         
-        // 5. Initialize contract
-        contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
-        
-        // 6. Verify contract connection
-        const owner = await contract.methods.owner().call()
-            .catch(() => { throw new Error('Contract connection failed') });
-            
-        // 7. Check admin status
+        // 5. Check admin status
         await checkIfAdmin();
         
         // 8. Setup listeners
@@ -855,14 +880,15 @@ async function isAdmin() {
 }
 
 async function mintNFT() {
-    console.log('[MintNFT] Initiating mint process for chip:', chipId);
-    if (!chipId) {
-        console.error('[MintNFT] Aborting - No chip ID detected');
-        updateStatus('No chip ID detected');
-        return;
-    }
-
     try {
+        const contract = await getContract();
+        console.log('[MintNFT] Initiating mint process for chip:', chipId);
+        if (!chipId) {
+            console.error('[MintNFT] Aborting - No chip ID detected');
+            updateStatus('No chip ID detected');
+            return;
+        }
+
         console.log('[MintNFT] Checking chip registration status:', chipId);
         const tokenId = await contract.methods.chipToTokenId(chipId).call();
         console.log('[MintNFT] Retrieved token ID:', tokenId);
