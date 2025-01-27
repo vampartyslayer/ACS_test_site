@@ -779,45 +779,32 @@ async function addBaseSepoliaNetwork() {
 
 // const ADMIN_ADDRESS = '0x1705280ae174a96bac66d3b10caee15a19c61eba';
 async function checkIfAdmin() {
-    if (isCheckingAdmin) return;
-    isCheckingAdmin = true;
-    updateStatus('Checking admin status...');
-    
     try {
-        // 1. Ensure account is available
-        if (!userAccount) {
-            const accounts = await web3.eth.getAccounts();
-            if (!accounts.length) throw new Error('No connected account');
-            userAccount = accounts[0];
+        // 1. Get current account
+        const [account] = await web3.eth.getAccounts();
+        if (!account) {
+            console.log("No account connected");
+            return false;
         }
 
-        // 2. Get owner with timeout
-        const owner = await Promise.race([
-            contract.methods.owner().call(),
-            new Promise((_, reject) => 
-                setTimeout(() => reject('Owner check timeout'), 5000))
-        ]);
-
-        // 3. Compare addresses safely
-        const isAdmin = web3.utils.toChecksumAddress(userAccount) === 
-                       web3.utils.toChecksumAddress(owner);
-
+        // 2. Get contract owner
+        const owner = await contract.methods.owner().call();
+        
+        // 3. Direct address comparison
+        const isAdmin = account.toLowerCase() === owner.toLowerCase();
+        
         // 4. Update UI
         document.getElementById('adminSection').style.display = isAdmin ? 'block' : 'none';
-        updateStatus(isAdmin ? 'Admin mode activated' : 'Connected as user');
-
-        // 5. Setup admin features if needed
-        if (isAdmin) {
-            setupAdminFeatures();
-        }
-
+        console.log("Admin check complete. Is admin:", isAdmin);
+        
+        console.log("User account:", account);
+        console.log("Contract owner:", owner);
+        
         return isAdmin;
+        
     } catch (error) {
         console.error("Admin check failed:", error);
-        updateStatus(`Error: ${error.message || error}`);
         return false;
-    } finally {
-        isCheckingAdmin = false;
     }
 }
 
@@ -998,3 +985,6 @@ async function checkConnection() {
         return false;
     }
 }
+
+// Run in browser console after init
+contract.methods.owner().call().then(console.log)
