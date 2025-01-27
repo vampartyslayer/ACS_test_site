@@ -676,29 +676,39 @@ const BASE_SEPOLIA_PARAMS = {
 };
 
 async function init() {
-    if (!window.ethereum) {
-        updateStatus('Please install MetaMask!');
-        return;
-    }
-
     try {
-        web3 = new Web3(window.ethereum);
-        contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
-        
-        setupEventListeners();
-        setupContractListeners();
-        const urlParams = new URLSearchParams(window.location.search);
-        chipId = urlParams.get('chipId');
-        handleChipId();
-        
-        const savedAccount = localStorage.getItem('userAccount');
-        if (savedAccount) {
-            userAccount = savedAccount;
-            await connectWallet();
+        if (window.ethereum) {
+            web3 = new Web3(window.ethereum);
+            await window.ethereum.enable();
+            
+            // Get account first
+            const accounts = await web3.eth.getAccounts();
+            userAccount = accounts[0];
+            
+            // Then check network
+            await checkNetwork();
+            
+            // Initialize contract after account and network
+            contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
+            
+            // Finally check admin status
+            await checkIfAdmin();
+            
+            setupEventListeners();
+            setupContractListeners();
+            const urlParams = new URLSearchParams(window.location.search);
+            chipId = urlParams.get('chipId');
+            handleChipId();
+            
+            const savedAccount = localStorage.getItem('userAccount');
+            if (savedAccount) {
+                userAccount = savedAccount;
+                await connectWallet();
+            }
         }
     } catch (error) {
-        console.error("Init error:", error);
-        updateStatus('Initialization failed');
+        console.error("Initialization failed:", error);
+        updateStatus('Connection error - please refresh');
     }
 }
 
@@ -757,17 +767,32 @@ async function addBaseSepoliaNetwork() {
 const ADMIN_ADDRESS = '0x1705280ae174a96bac66d3b10caee15a19c61eba';
 async function checkIfAdmin() {
     try {
+        // Ensure we have a connected account first
+        if (!userAccount) {
+            const accounts = await web3.eth.getAccounts();
+            userAccount = accounts[0];
+        }
+
+        // Get contract owner
         const owner = await contract.methods.owner().call();
-        const isAdmin = userAccount.toLowerCase() === owner.toLowerCase();
         
+        // Compare addresses
+        const isAdmin = web3.utils.toChecksumAddress(userAccount) === 
+                      web3.utils.toChecksumAddress(owner);
+
+        // Update UI based on admin status
+        document.getElementById('adminSection').style.display = isAdmin ? 'block' : 'none';
+        
+        // Only setup refresh if admin
         if (isAdmin) {
-            document.getElementById('adminSection').style.display = 'block';
             setInterval(updateChipsTable, 30000);
             updateChipsTable();
         }
+
         return isAdmin;
     } catch (error) {
         console.error("Admin check failed:", error);
+        updateStatus('Error checking admin status');
         return false;
     }
 }
