@@ -3,7 +3,7 @@ let contract;
 let userAccount;
 let chipId;
 
-const CONTRACT_ADDRESS = '0x05742B249a116b57Ba0469086B5D68fF0e042Bf6';
+const CONTRACT_ADDRESS = '0xfaf77c99E8E7C704b37449DCD08cb3555887cC94';
 const CONTRACT_ABI = [
 	{
 		"inputs": [
@@ -854,3 +854,63 @@ function handleAccountChange(accounts) {
 }
 
 window.addEventListener('load', init);
+
+function updateChipsTable() {
+    try {
+        const chips = [];
+        const totalSupply = await contract.methods.totalSupply().call();
+        for (let i = 1; i <= totalSupply; i++) {
+            const tokenId = await contract.methods.chipToTokenId(i.toString()).call();
+            const isMinted = await contract.methods.tokenIdMinted(i).call();
+            const owner = await contract.methods.ownerOf(tokenId).call();
+            chips.push({
+                chipId: i.toString(),
+                tokenId: tokenId.toString(),
+                isMinted: isMinted,
+                owner: owner
+            });
+        }
+        
+        const tbody = document.getElementById('chipsTableBody');
+        tbody.innerHTML = '';
+        
+        for (const chip of chips) {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${chip.chipId || 'N/A'}</td>
+                <td>${chip.tokenId}</td>
+                <td>
+                    <span class="status-pill ${chip.isMinted ? 'status-minted' : 'status-registered'}">
+                        ${chip.isMinted ? 'Minted' : 'Registered'}
+                    </span>
+                </td>
+                <td>${chip.owner ? shortenAddress(chip.owner) : 'N/A'}</td>
+            `;
+            tbody.appendChild(row);
+        }
+        
+        if (chips.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4">No chips registered yet</td></tr>';
+        }
+    } catch (error) {
+        console.error('Error loading chips:', error);
+        tbody.innerHTML = '<tr><td colspan="4">Error loading data</td></tr>';
+    }
+}
+
+// Helper function to shorten addresses
+function shortenAddress(address) {
+    return address ? `${address.slice(0, 6)}...${address.slice(-4)}` : '';
+}
+
+// Add to existing init function
+document.getElementById('registerChip').addEventListener('click', async () => {
+    await registerChip();
+    await updateChipsTable();
+});
+
+// Add to checkIfAdmin function
+if (isAdmin) {
+    setInterval(updateChipsTable, 30000); // Refresh every 30 seconds
+    updateChipsTable();
+}

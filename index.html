@@ -3,13 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome to the Future</title>
+    <title>NFT Access Protocol</title>
     <style>
+        :root {
+            --primary: #4CAF50;
+            --secondary: #2196F3;
+            --error: #f44336;
+            --warning: #FFA726;
+            --background: #121212;
+            --surface: #1E1E1E;
+        }
+
         body {
-            font-family: 'Helvetica Neue', Arial, sans-serif;
+            font-family: 'Roboto', sans-serif;
             margin: 0;
-            padding: 0;
-            background: #000;
+            padding: 2rem;
+            background: var(--background);
             color: #fff;
             display: flex;
             justify-content: center;
@@ -98,6 +107,32 @@
         .status-unminted {
             color: #FFA726;
         }
+        .table-container {
+            max-height: 400px;
+            overflow-y: auto;
+            margin: 20px 0;
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            padding: 10px;
+        }
+        .chips-table th {
+            background: #222;
+            position: sticky;
+            top: 0;
+        }
+        .chips-table td, .chips-table th {
+            padding: 12px 15px;
+            border-bottom: 1px solid #333;
+        }
+        .status-pill {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.9em;
+        }
+        .status-registered { background: #4CAF5020; color: #4CAF50; }
+        .status-minted { background: #2196F320; color: #2196F3; }
+        .status-available { background: #FFA72620; color: #FFA726; }
     </style>
 </head>
 <body>
@@ -120,7 +155,24 @@
             <h2>Admin Dashboard</h2>
             <input type="text" id="chipIdRegister" placeholder="Enter Chip ID">
             <button id="registerChip">Register Chip</button>
-            <div id="chipsList"></div>
+            <div class="admin-dashboard">
+                <h2>Registered Chips</h2>
+                <div class="table-container">
+                    <table class="chips-table">
+                        <thead>
+                            <tr>
+                                <th>Chip ID</th>
+                                <th>Token ID</th>
+                                <th>Status</th>
+                                <th>Owner</th>
+                            </tr>
+                        </thead>
+                        <tbody id="chipsTableBody">
+                            <!-- Rows will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
 
         <div id="userSection" class="user-section">

@@ -1,0 +1,74 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
+
+contract ACSMemberShipV1 is ERC721Upgradeable, OwnableUpgradeable {
+    using CountersUpgradeable for CountersUpgradeable.Counter;
+    CountersUpgradeable.Counter private _tokenIdCounter;
+
+    mapping(address => bool) public hasClaimed;
+    mapping(string => uint256) public chipToTokenId;
+    mapping(uint256 => bool) public tokenIdMinted;
+    string[] private _chipIds;
+    mapping(uint256 => string) private _tokenIdToChip;
+    string private _tokenURI;
+
+    event ChipRegistered(string indexed chipId, uint256 indexed tokenId);
+    event NFTMinted(address indexed owner, uint256 indexed tokenId, string chipId);
+    event TokenURIChanged(string newTokenURI);
+
+    function initialize() public initializer {
+        __ERC721_init("ACS Member Ship V.2", "ACSM");
+        __Ownable_init(msg.sender);
+        _tokenURI = "https://coffee-used-stoat-528.mypinata.cloud/ipfs/QmZUC84R7h2paaPiJXUN3unMNVnyBMZ5bERBAKeSzZuXdz";
+    }
+
+    function registerChip(string memory chipId) external onlyOwner {
+        require(chipToTokenId[chipId] == 0, "Chip already registered");
+        _tokenIdCounter.increment();
+        uint256 newTokenId = _tokenIdCounter.current();
+        
+        chipToTokenId[chipId] = newTokenId;
+        _tokenIdToChip[newTokenId] = chipId;
+        _chipIds.push(chipId);
+        
+        emit ChipRegistered(chipId, newTokenId);
+    }
+
+    function mintNFT(string memory chipId) external {
+        uint256 tokenId = chipToTokenId[chipId];
+        require(tokenId != 0, "Chip not registered");
+        require(!tokenIdMinted[tokenId], "NFT already minted");
+        require(!hasClaimed[msg.sender], "Address already claimed");
+
+        _safeMint(msg.sender, tokenId);
+        tokenIdMinted[tokenId] = true;
+        hasClaimed[msg.sender] = true;
+        
+        emit NFTMinted(msg.sender, tokenId, chipId);
+    }
+
+    function getAllChipIds() external view returns (string[] memory) {
+        return _chipIds;
+    }
+
+    function getChipIdForToken(uint256 tokenId) external view returns (string memory) {
+        return _tokenIdToChip[tokenId];
+    }
+
+    function tokenURI(uint256) public view virtual override returns (string memory) {
+        return _tokenURI;
+    }
+
+    function setTokenURI(string memory newTokenURI) external onlyOwner {
+        _tokenURI = newTokenURI;
+        emit TokenURIChanged(newTokenURI);
+    }
+
+    function totalSupply() public view returns (uint256) {
+        return _tokenIdCounter.current() - 1;
+    }
+}
