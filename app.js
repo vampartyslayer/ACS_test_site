@@ -746,14 +746,8 @@ const CONTRACT_ABI = [
 	}
 ];
 
-const BASE_SEPOLIA_CHAIN_ID = '84532';
-const BASE_SEPOLIA_PARAMS = {
-    chainId: '0x14A34',
-    chainName: 'Base Sepolia',
-    nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
-    rpcUrls: ['https://sepolia.base.org'],
-    blockExplorerUrls: ['https://sepolia-explorer.base.org']
-};
+const BASE_SEPOLIA_CHAIN_ID = 84532; // Use numeric chain ID for comparisons
+const BASE_SEPOLIA_HEX = '0x14CC4'; // Hex version for MetaMask calls
 
 // Add loading state management
 let isCheckingAdmin = false;
@@ -765,14 +759,22 @@ async function initWeb3() {
         // Initialize Web3 first
         web3 = new Web3(window.ethereum);
         
-        // Request account access
-        await window.ethereum.request({ method: 'eth_requestAccounts' });
+        // Check network before any contract interactions
+        await validateNetwork();
         
-        // Initialize contract after web3
+        // Get accounts after network check
+        const accounts = await web3.eth.getAccounts();
+        userAccount = accounts[0] || null;
+        
+        // Initialize contract with validated network
         contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
+        console.log('[Init] Contract initialized with methods:', Object.keys(contract.methods));
         
-        console.log('[Init] Contract methods:', Object.keys(contract.methods));
+        // Post-initialization setup
         checkUrlForChipId();
+        setupEventListeners();
+        checkIfAdmin();
+        
     } catch (error) {
         console.error('[Init] Initialization failed:', error);
         updateStatus(`Error: ${error.message}`);
@@ -797,37 +799,13 @@ async function getContract() {
 
 async function init() {
     try {
-        updateStatus('Connecting...');
-        
-        // 1. Initialize Web3
         await initWeb3();
-        
-        // 2. Get initial account
-        const accounts = await web3.eth.getAccounts();
-        userAccount = accounts[0];
-        
-        // 4. Network check
-        if (!(await checkNetwork())) return;
-        
-        // 5. Check admin status
+        await validateNetwork();
+        await setupEventListeners();
         await checkIfAdmin();
-        
-        // 8. Setup listeners
-        setupEventListeners();
-        
-        setupContractListeners();
-        const urlParams = new URLSearchParams(window.location.search);
-        chipId = urlParams.get('chipId');
-        handleChipId();
-        
-        const savedAccount = localStorage.getItem('userAccount');
-        if (savedAccount) {
-            userAccount = savedAccount;
-            await connectWallet();
-        }
     } catch (error) {
-        console.error("Initialization failed:", error);
-        updateStatus(`Error: ${error.message || error}`);
+        console.error('[Init] Critical initialization error:', error);
+        updateStatus(`Initialization failed: ${error.message}`);
     }
 }
 
@@ -1101,10 +1079,8 @@ document.addEventListener('DOMContentLoaded', initWeb3);
 
 async function updateChipsTable() {
     try {
-        // Add null check
-        if (!contract?.methods?.getAllChipIds) {
-            throw new Error('Contract methods not available');
-        }
+        // Wait for contract initialization
+        if (!contract?.methods) await initWeb3();
         
         const chipIds = await contract.methods.getAllChipIds().call();
         console.log('[ChipsTable] Retrieved', chipIds.length, 'chip IDs from contract');
@@ -1150,6 +1126,7 @@ async function updateChipsTable() {
         }
     } catch (error) {
         console.error('[ChipsTable] Error:', error);
+        updateStatus('Error loading chip data: ' + error.message);
     }
 }
 
