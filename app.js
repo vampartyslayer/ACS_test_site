@@ -752,32 +752,63 @@ const BASE_SEPOLIA_HEX = '0x14CC4'; // Hex version for MetaMask calls
 // Add loading state management
 let isCheckingAdmin = false;
 
+// Add this function to handle URL parameters
+function checkUrlForChipId() {
+    try {
+        const urlParams = new URLSearchParams(window.location.search);
+        chipId = urlParams.get('chipId');
+        
+        if (chipId) {
+            console.log('[URL] Detected chip ID:', chipId);
+            handleChipId();
+        }
+    } catch (error) {
+        console.error('[URL] Error parsing chip ID:', error);
+    }
+}
+
+// Update the handleChipId function
+async function handleChipId() {
+    try {
+        console.log('[Chip] Handling chip ID:', chipId);
+        
+        if (!chipId) {
+            console.log('[Chip] No chip ID available');
+            document.getElementById('invitationTitle').textContent = 'YOU WERE NOT INVITED';
+            updateStatus('You have not tapped in');
+            return;
+        }
+
+        const tokenId = await contract.methods.chipToTokenId(chipId).call();
+        console.log('[Chip] Resolved token ID:', tokenId);
+        
+        // Rest of your existing handleChipId logic...
+
+    } catch (error) {
+        console.error('[Chip] Handling error:', error);
+        updateStatus('Error processing chip: ' + error.message);
+    }
+}
+
+// Update the initWeb3 function
 async function initWeb3() {
     try {
         if (!window.ethereum) throw new Error('No Ethereum provider detected');
         
-        // Initialize Web3 first
         web3 = new Web3(window.ethereum);
+        await window.ethereum.enable();
         
-        // Check network before any contract interactions
-        await validateNetwork();
-        
-        // Get accounts after network check
-        const accounts = await web3.eth.getAccounts();
-        userAccount = accounts[0] || null;
-        
-        // Initialize contract with validated network
         contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
-        console.log('[Init] Contract initialized with methods:', Object.keys(contract.methods));
+        console.log('[Init] Contract methods verified');
         
-        // Post-initialization setup
+        // Initialize chip handling after contract setup
         checkUrlForChipId();
-        setupEventListeners();
-        checkIfAdmin();
+        
+        // Rest of your initialization logic...
         
     } catch (error) {
-        console.error('[Init] Initialization failed:', error);
-        updateStatus(`Error: ${error.message}`);
+        console.error('[Init] Critical error:', error);
+        updateStatus('Initialization failed: ' + error.message);
     }
 }
 
@@ -998,54 +1029,6 @@ function updateStatus(message) {
     const statusElement = document.getElementById('status');
     if (statusElement) {
         statusElement.textContent = message;
-    }
-}
-
-async function handleChipId() {
-    try {
-        if (!isInitialized) {
-            await initWeb3();
-        }
-        
-        const contract = await getContract();
-        
-        console.log('[ChipHandler] Processing chip ID from URL');
-        try {
-            const urlParams = new URLSearchParams(window.location.search);
-            chipId = urlParams.get('chipId');
-            
-            if (chipId) {
-                console.log('[ChipHandler] Detected chip ID in URL:', chipId);
-                document.getElementById('chipIdDisplay').textContent = chipId;
-                const mintButton = document.getElementById('mintNFT');
-                const mintMessage = document.getElementById('mintMessage');
-                const title = document.getElementById('invitationTitle');
-                mintButton.disabled = false;
-                mintButton.classList.remove('disabled-button');
-                title.textContent = 'YOU ARE INVITED';
-            } else {
-                console.warn('[ChipHandler] No chip ID found in URL parameters');
-                const mintButton = document.getElementById('mintNFT');
-                const mintMessage = document.getElementById('mintMessage');
-                const title = document.getElementById('invitationTitle');
-                title.textContent = 'YOU WERE NOT INVITED';
-                mintButton.disabled = true;
-                mintButton.classList.add('disabled-button');
-                mintMessage.textContent = 'You have not tapped in';
-            }
-
-            // Existing token checks with added logging
-            const tokenId = await contract.methods.chipToTokenId(chipId).call();
-            console.log('[ChipHandler] Token ID resolution:', { chipId, tokenId });
-            
-        } catch (error) {
-            console.error('[ChipHandler] Error processing chip ID:', {
-                chipId,
-                error: error.message
-            });
-        }
-    } catch (error) {
-        console.error('[ChipHandler] Error:', error);
     }
 }
 
