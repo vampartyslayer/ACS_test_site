@@ -828,7 +828,11 @@ async function addBaseSepoliaNetwork() {
 function checkUrlForChipId() {
     const urlParams = new URLSearchParams(window.location.search);
     chipId = urlParams.get('chipId');
-    if (chipId) handleChipId();
+    
+    if (chipId) {
+        document.getElementById('chipIdDisplay').textContent = chipId;
+        if (userAccount) checkChipStatus();
+    }
 }
 
 async function handleChipId() {
@@ -843,13 +847,14 @@ async function checkChipStatus() {
         
         if (isMinted) {
             const owner = await contract.methods.ownerOf(tokenId).call();
-            updateStatus(`Claimed by ${shortenAddress(owner)}`);
+            updateStatus(`Already claimed by ${shortenAddress(owner)}`);
             disableMintButton();
         } else {
             enableMintButton();
             updateStatus('Ready to mint!');
         }
     } catch (error) {
+        disableMintButton();
         updateStatus('Invalid chip: ' + error.message);
     }
 }
@@ -858,7 +863,7 @@ async function checkChipStatus() {
  *  UI FUNCTIONS
  *********************/
 function setupEventListeners() {
-    document.getElementById('connectWallet').addEventListener('click', init);
+    document.getElementById('connectWallet').addEventListener('click', connectWallet);
     document.getElementById('mintNFT').addEventListener('click', mintNFT);
 }
 
@@ -871,11 +876,15 @@ function updateStatus(message) {
 }
 
 function enableMintButton() {
-    document.getElementById('mintNFT').disabled = false;
+    const btn = document.getElementById('mintNFT');
+    btn.disabled = false;
+    btn.classList.remove('disabled');
 }
 
 function disableMintButton() {
-    document.getElementById('mintNFT').disabled = true;
+    const btn = document.getElementById('mintNFT');
+    btn.disabled = true;
+    btn.classList.add('disabled');
 }
 
 function shortenAddress(address) {
@@ -901,46 +910,43 @@ async function mintNFT() {
 /*********************
  *  INITIALIZATION
  *********************/
-document.addEventListener('DOMContentLoaded', init);
+document.addEventListener('DOMContentLoaded', () => {
+    // Initialize UI state
+    disableMintButton();
+    setupEventListeners();
+    checkUrlForChipId();
+});
 
-// Add loading state management
-let isCheckingAdmin = false;
-
-// Add this function to handle URL parameters
-function checkUrlForChipId() {
+/*********************
+ *  WALLET CONNECTION
+ *********************/
+async function connectWallet() {
     try {
-        const urlParams = new URLSearchParams(window.location.search);
-        chipId = urlParams.get('chipId');
+        if (!window.ethereum) throw new Error('Please install MetaMask');
         
+        // Initialize Web3
+        web3 = new Web3(window.ethereum);
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        userAccount = accounts[0];
+        
+        // Network validation
+        await validateNetwork();
+        
+        // Initialize contract
+        contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
+        
+        // Update UI
+        document.getElementById('connectWallet').style.display = 'none';
+        document.getElementById('walletAddress').textContent = shortenAddress(userAccount);
+        
+        // Check chip status after connection
         if (chipId) {
-            console.log('[URL] Detected chip ID:', chipId);
-            handleChipId();
+            await checkChipStatus();
         }
-    } catch (error) {
-        console.error('[URL] Error parsing chip ID:', error);
-    }
-}
-
-// Update the handleChipId function
-async function handleChipId() {
-    try {
-        console.log('[Chip] Handling chip ID:', chipId);
         
-        if (!chipId) {
-            console.log('[Chip] No chip ID available');
-            document.getElementById('invitationTitle').textContent = 'YOU WERE NOT INVITED';
-            updateStatus('You have not tapped in');
-            return;
-        }
-
-        const tokenId = await contract.methods.chipToTokenId(chipId).call();
-        console.log('[Chip] Resolved token ID:', tokenId);
-        
-        // Rest of your existing handleChipId logic...
-
     } catch (error) {
-        console.error('[Chip] Handling error:', error);
-        updateStatus('Error processing chip: ' + error.message);
+        console.error('Wallet connection failed:', error);
+        updateStatus(`Connection error: ${error.message}`);
     }
 }
 
