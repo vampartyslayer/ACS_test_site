@@ -873,9 +873,13 @@ async function addBaseSepoliaNetwork() {
 async function handleChipIdFromURL() {
     const urlParams = new URLSearchParams(window.location.search);
     chipId = urlParams.get('chipId');
+    
     if (chipId) {
-        console.log('[URL] Found chip ID:', chipId);
+        console.log('[Chip] URL parameter detected:', chipId);
         await checkChipStatus();
+    } else {
+        console.log('[Chip] No chip ID in URL');
+        updateStatus('Scan a chip to begin');
     }
 }
 
@@ -1201,3 +1205,47 @@ async function checkConnection() {
 
 // Run in browser console after init
 contract.methods.owner().call().then(console.log)
+
+async function checkChipStatus() {
+    try {
+        if (!chipId) {
+            console.warn('[Chip] No chip ID to check');
+            updateStatus('No chip ID detected');
+            return;
+        }
+
+        console.log('[Chip] Checking status for:', chipId);
+        updateStatus('Verifying chip...');
+
+        // 1. Check if chip is registered
+        const tokenId = await contract.methods.chipToTokenId(chipId).call();
+        console.log('[Chip] Associated token ID:', tokenId);
+
+        // 2. Check if token is minted
+        const isMinted = await contract.methods.tokenIdMinted(tokenId).call();
+        console.log('[Chip] Mint status:', isMinted);
+
+        // 3. Update UI based on status
+        if (isMinted) {
+            const owner = await contract.methods.ownerOf(tokenId).call();
+            updateStatus(`Already claimed by ${shortenAddress(owner)}`);
+            disableMintButton();
+        } else {
+            enableMintButton();
+            updateStatus('Chip is valid - Ready to mint!');
+        }
+
+    } catch (error) {
+        console.error('[Chip] Status check failed:', error);
+        if (error.message.includes('nonexistent token')) {
+            updateStatus('Chip not registered');
+        } else {
+            updateStatus('Error checking chip: ' + error.message);
+        }
+    }
+}
+
+// Add helper function to shorten addresses
+function shortenAddress(address) {
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+}
