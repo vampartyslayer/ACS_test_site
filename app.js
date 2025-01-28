@@ -749,6 +749,7 @@ let contract;
 let userAccount;
 let chipId;
 let isInitialized = false;
+let isAdmin = false;
 
 /*********************
  *  CORE FUNCTIONS
@@ -869,6 +870,10 @@ function setupEventListeners() {
     
     if (connectBtn) connectBtn.addEventListener('click', connectWallet);
     if (mintBtn) mintBtn.addEventListener('click', mintNFT);
+    
+    // Admin controls
+    document.getElementById('registerChip')?.addEventListener('click', registerChip);
+    document.getElementById('updateTokenURI')?.addEventListener('click', updateTokenURI);
 }
 
 function updateStatus(message) {
@@ -903,13 +908,20 @@ function shortenAddress(address) {
  *********************/
 async function mintNFT() {
     try {
-        if (!contract || !contract.methods || !contract.methods.mintNFT) {
-            throw new Error('Contract not properly initialized');
+        if (!contract?.methods?.mintNFT) {
+            throw new Error('Contract not initialized');
+        }
+        
+        if (!chipId) {
+            throw new Error('No chip ID detected');
         }
         
         updateStatus('Minting...');
         const receipt = await contract.methods.mintNFT(chipId)
-            .send({ from: userAccount });
+            .send({ 
+                from: userAccount,
+                gas: 300000 // Adjust gas limit as needed
+            });
         
         console.log('Mint successful:', receipt);
         updateStatus('NFT Minted!');
@@ -918,6 +930,7 @@ async function mintNFT() {
     } catch (error) {
         console.error('Mint failed:', error);
         updateStatus('Mint error: ' + error.message);
+        enableMintButton();
     }
 }
 
@@ -986,31 +999,19 @@ async function handleChipId() {
 // const ADMIN_ADDRESS = '0x1705280ae174a96bac66d3b10caee15a19c61eba';
 async function checkIfAdmin() {
     try {
-        // 1. Get current account
-        const [account] = await web3.eth.getAccounts();
-        if (!account) {
-            console.log("No account connected");
-            return false;
-        }
-
-        // 2. Get contract owner
+        if (!contract?.methods?.owner) return;
+        
         const owner = await contract.methods.owner().call();
+        isAdmin = (userAccount.toLowerCase() === owner.toLowerCase());
         
-        // 3. Direct address comparison
-        const isAdmin = account.toLowerCase() === owner.toLowerCase();
-        
-        // 4. Update UI
-        document.getElementById('adminSection').style.display = isAdmin ? 'block' : 'none';
-        console.log("Admin check complete. Is admin:", isAdmin);
-        
-        console.log("User account:", account);
-        console.log("Contract owner:", owner);
-        
-        return isAdmin;
+        const adminPanel = document.getElementById('adminPanel');
+        if (adminPanel) {
+            adminPanel.style.display = isAdmin ? 'block' : 'none';
+        }
         
     } catch (error) {
-        console.error("Admin check failed:", error);
-        return false;
+        console.error('Admin check failed:', error);
+        isAdmin = false;
     }
 }
 
@@ -1029,35 +1030,37 @@ function setupAdminFeatures() {
 }
 
 async function registerChip() {
-    const chipIdToRegister = document.getElementById('chipIdRegister').value;
-    console.log('[RegisterChip] Attempting to register chip:', chipIdToRegister);
-    
     try {
-        const tx = await contract.methods.registerChip(chipIdToRegister)
+        const newChipId = prompt('Enter new chip ID:');
+        if (!newChipId) return;
+        
+        updateStatus('Registering chip...');
+        await contract.methods.registerChip(newChipId)
             .send({ from: userAccount });
-        
-        console.log('[RegisterChip] Chip registered successfully:', {
-            chipId: chipIdToRegister,
-            transactionHash: tx.transactionHash
-        });
-        
-        updateStatus('Chip registered successfully');
-        updateChipsTable();
-
+            
+        updateStatus('Chip registered successfully!');
     } catch (error) {
-        console.error('[RegisterChip] Registration failed:', {
-            error: error.message,
-            chipId: chipIdToRegister,
-            stack: error.stack
-        });
-        updateStatus('Failed to register chip: ' + error.message);
+        console.error('Chip registration failed:', error);
+        updateStatus('Registration error: ' + error.message);
     }
 }
 
-async function isAdmin() {
-    const contract = await getContract();
-    const owner = await contract.methods.owner().call();
-    return (owner.toLowerCase() === (await web3.eth.getAccounts())[0].toLowerCase());
+async function updateTokenURI() {
+    try {
+        const tokenId = prompt('Enter token ID:');
+        const newURI = prompt('Enter new URI:');
+        
+        if (!tokenId || !newURI) return;
+        
+        updateStatus('Updating URI...');
+        await contract.methods.setTokenURI(tokenId, newURI)
+            .send({ from: userAccount });
+            
+        updateStatus('URI updated successfully!');
+    } catch (error) {
+        console.error('URI update failed:', error);
+        updateStatus('Update error: ' + error.message);
+    }
 }
 
 async function handleChipIdFromURL() {
@@ -1149,6 +1152,7 @@ window.ethereum.on('chainChanged', (chainId) => {
 window.ethereum.on('accountsChanged', (accounts) => {
     userAccount = accounts[0];
     checkIfAdmin();
+    if (chipId) checkChipStatus();
 });
 
 async function checkConnection() {
@@ -1188,6 +1192,16 @@ async function connectWallet() {
         if (chipId) {
             await checkChipStatus();
         }
+        
+        // After successful connection
+        await checkIfAdmin();
+        
+        // Add account change listener
+        window.ethereum.on('accountsChanged', async (accounts) => {
+            userAccount = accounts[0];
+            await checkIfAdmin();
+            if (chipId) checkChipStatus();
+        });
         
     } catch (error) {
         console.error('Connection failed:', error);
