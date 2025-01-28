@@ -837,12 +837,12 @@ async function validateNetwork() {
 /*********************
  *  CHIP HANDLING
  *********************/
-function checkUrlForChipId() {
-    const params = new URLSearchParams(window.location.search);
-    const chipId = params.get('chipId');
-    if (chipId) {
-        updateChipDisplay(chipId);
-    }
+function updateChipDisplay(chipId) {
+    const chipDisplay = document.getElementById('chipIdDisplay');
+    const adminPanel = document.getElementById('adminPanel');
+    
+    if (chipDisplay) chipDisplay.textContent = `Linked Chip: ${chipId}`;
+    if (adminPanel) adminPanel.style.display = 'block';
 }
 
 async function checkChipStatus() {
