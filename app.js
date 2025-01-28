@@ -838,9 +838,11 @@ async function validateNetwork() {
  *  CHIP HANDLING
  *********************/
 function checkUrlForChipId() {
-    const urlParams = new URLSearchParams(window.location.search);
-    chipId = urlParams.get('chipId');
-    updateChipDisplay();
+    const params = new URLSearchParams(window.location.search);
+    const chipId = params.get('chipId');
+    if (chipId) {
+        updateChipDisplay(chipId);
+    }
 }
 
 async function checkChipStatus() {
@@ -1156,4 +1158,12 @@ async function initWeb3() {
     } else {
         console.error('No Ethereum provider detected');
     }
+}
+
+function updateChipDisplay(chipId) {
+    const chipDisplay = document.getElementById('chipIdDisplay');
+    const adminPanel = document.getElementById('adminPanel');
+    
+    if (chipDisplay) chipDisplay.textContent = `Linked Chip: ${chipId}`;
+    if (adminPanel) adminPanel.style.display = 'block';
 }
