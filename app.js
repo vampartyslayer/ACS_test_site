@@ -783,23 +783,27 @@ function validateRequiredElements() {
  *********************/
 async function connectWallet() {
     try {
-        // 1. Validate Ethereum provider
         if (!window.ethereum) throw new Error('Please install MetaMask');
         
-        // 2. Initialize Web3
+        // 1. Initialize Web3 first
         web3 = new Web3(window.ethereum);
         
-        // 3. Request accounts
+        // 2. Initialize contract before accounts
+        contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
+        
+        // 3. Then request accounts
         const accounts = await window.ethereum.request({ 
             method: 'eth_requestAccounts' 
         });
         userAccount = accounts[0];
         
-        // 4. Initialize contract
-        contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
-        
-        // 5. Validate network
+        // 4. Validate network
         await validateNetwork();
+        
+        // 5. Verify contract methods exist
+        if (!contract?.methods) {
+            throw new Error('Contract methods not loaded');
+        }
         
         // 6. Update UI
         updateWalletDisplay();
@@ -841,9 +845,12 @@ function checkUrlForChipId() {
 
 async function checkChipStatus() {
     try {
-        // Contract guard clause
-        if (!contract?.methods?.chipToTokenId) {
+        if (!contract || !contract.methods) {
             throw new Error('Contract not initialized');
+        }
+        
+        if (!contract.methods.chipToTokenId) {
+            throw new Error('Contract ABI missing required methods');
         }
         
         const tokenId = await contract.methods.chipToTokenId(chipId).call();
@@ -1061,6 +1068,7 @@ window.ethereum.on('chainChanged', (chainId) => {
 
 window.ethereum.on('accountsChanged', (accounts) => {
     userAccount = accounts[0];
+    contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS); // Re-init contract
     checkIfAdmin();
     if (chipId) checkChipStatus();
 });
@@ -1119,6 +1127,7 @@ function hideAdminPanel() {
 function setupAccountChangeListener() {
     window.ethereum.on('accountsChanged', (accounts) => {
         userAccount = accounts[0];
+        contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS); // Re-init contract
         checkIfAdmin();
         if (chipId) checkChipStatus();
     });
