@@ -753,27 +753,31 @@ let isInitialized = false;
 let isAdmin = false;
 
 /*********************
- *  CORE INITIALIZATION (FINAL)
+ *  EVENT LISTENERS SETUP
+ *********************/
+function setupEventListeners() {
+    document.getElementById('connectWallet').addEventListener('click', connectWallet);
+    document.getElementById('mintNFT').addEventListener('click', mintNFT);
+    
+    // Add null check for admin elements
+    const registerBtn = document.getElementById('registerChip');
+    if (registerBtn) {
+        registerBtn.addEventListener('click', registerChip);
+    }
+}
+
+/*********************
+ *  CORE INITIALIZATION (AT BOTTOM)
  *********************/
 document.addEventListener('DOMContentLoaded', async () => {
     try {
-        // 1. Initialize read-only provider with retry logic
         await initializeReadOnlyProvider();
-        
-        // 2. Setup UI components
         validateRequiredElements();
         disableMintButton();
         hideAdminPanel();
-        
-        // 3. Set up event listeners
         setupEventListeners();
-        
-        // 4. Check URL parameters now that contract is ready
         await checkUrlForChipId();
-        
-        // 5. Check for existing wallet connection
         await checkPersistedConnection();
-        
     } catch (error) {
         console.error('Boot sequence failed:', error);
         updateStatus('System initialization failed - please refresh');
@@ -980,17 +984,6 @@ function updateChipDisplay(chipId) {
     const adminPanel = document.getElementById('adminPanel');
     if (adminPanel) {
         adminPanel.style.display = 'block';
-    }
-}
-
-function setupEventListeners() {
-    document.getElementById('connectWallet').addEventListener('click', connectWallet);
-    document.getElementById('mintNFT').addEventListener('click', mintNFT);
-    
-    // Add null check for admin elements
-    const registerBtn = document.getElementById('registerChip');
-    if (registerBtn) {
-        registerBtn.addEventListener('click', registerChip);
     }
 }
 
