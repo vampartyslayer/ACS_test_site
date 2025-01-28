@@ -755,17 +755,15 @@ let isAdmin = false;
  *  CORE INITIALIZATION
  *********************/
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Validate DOM elements first
+    // 1. Initialize UI first
     validateRequiredElements();
-    
-    // 2. Initialize UI state
     disableMintButton();
     hideAdminPanel();
     
-    // 3. Set up event listeners
+    // 2. Set up event listeners before any user interaction
     setupEventListeners();
     
-    // 4. Check URL parameters (no contract interaction yet)
+    // 3. Check URL parameters after initial setup
     checkUrlForChipId();
 });
 
@@ -835,7 +833,7 @@ async function validateNetwork() {
 }
 
 /*********************
- *  CHIP HANDLING
+ *  CHIP HANDLING (HOISTED FIRST)
  *********************/
 function updateChipDisplay(chipId) {
     const chipDisplay = document.getElementById('chipIdDisplay');
@@ -987,13 +985,17 @@ async function updateTokenURI() {
     }
 }
 
-async function handleChipIdFromURL() {
+/*********************
+ *  URL PARAM HANDLING (RENAMED FROM handleChipIdFromURL)
+ *********************/
+function checkUrlForChipId() {
     const urlParams = new URLSearchParams(window.location.search);
     chipId = urlParams.get('chipId');
     
     if (chipId) {
         console.log('[Chip] URL parameter detected:', chipId);
-        await checkChipStatus();
+        updateChipDisplay(chipId);
+        checkChipStatus();
     } else {
         console.log('[Chip] No chip ID in URL');
         updateStatus('Scan a chip to begin');
@@ -1144,7 +1146,7 @@ function setupAccountChangeListener() {
 }
 
 /*********************
- *  WEB3 INITIALIZATION
+ *  WEB3 INITIALIZATION (MOVED UP)
  *********************/
 async function initWeb3() {
     if (window.ethereum) {
@@ -1158,12 +1160,4 @@ async function initWeb3() {
     } else {
         console.error('No Ethereum provider detected');
     }
-}
-
-function updateChipDisplay(chipId) {
-    const chipDisplay = document.getElementById('chipIdDisplay');
-    const adminPanel = document.getElementById('adminPanel');
-    
-    if (chipDisplay) chipDisplay.textContent = `Linked Chip: ${chipId}`;
-    if (adminPanel) adminPanel.style.display = 'block';
 }
