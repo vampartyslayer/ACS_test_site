@@ -923,7 +923,7 @@ async function checkChipStatus() {
  *********************/
 async function mintNFT() {
     try {
-        validateMintPreconditions();
+       // validateMintPreconditions();
         
         updateStatus('Minting...');
         const receipt = await contract.methods.mintNFT(chipId)
