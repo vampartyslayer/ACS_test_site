@@ -1,8 +1,8 @@
 /*********************
- *  CONSTANTS & CONFIG
+ *  CONFIGURATION
  *********************/
-const BASE_SEPOLIA_CHAIN_ID = 84532;
 const CONTRACT_ADDRESS = '0xfaf77c99E8E7C704b37449DCD08cb3555887cC94';
+const BASE_SEPOLIA_CHAIN_ID = 84532;
 const BASE_SEPOLIA_RPC = 'https://sepolia.base.org';
 const CONTRACT_ABI = [
 	{
@@ -753,8 +753,20 @@ let isInitialized = false;
 let isAdmin = false;
 
 /*********************
- *  UI FUNCTIONS
+ *  UI FUNCTIONS 
  *********************/
+function updateWalletDisplay() {
+    const connectBtn = document.getElementById('connectWallet');
+    const walletDisplay = document.getElementById('walletAddress');
+    if (connectBtn) connectBtn.style.display = 'none';
+    if (walletDisplay) walletDisplay.textContent = shortenAddress(userAccount);
+}
+
+function hideAdminPanel() {
+    const adminPanel = document.getElementById('adminPanel');
+    if (adminPanel) adminPanel.style.display = 'none';
+}
+
 function updateChipDisplay(chipId) {
     const chipDisplay = document.getElementById('chipIdDisplay');
     const userSection = document.getElementById('userSection');
@@ -772,20 +784,45 @@ function updateChipDisplay(chipId) {
     }
 }
 
-function hideAdminPanel() {
-    const adminPanel = document.getElementById('adminPanel');
-    if (adminPanel) adminPanel.style.display = 'none';
-}
+/*********************
+ *  CORE INITIALIZATION
+ *********************/
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        // 1. Initialize read-only provider with retry logic
+        await initializeReadOnlyProvider();
+        
+        // 2. Setup UI components
+        validateRequiredElements();
+        disableMintButton();
+        hideAdminPanel();
+        
+        // 3. Set up event listeners
+        setupEventListeners();
+        
+        // 4. Check URL parameters now that contract is ready
+        await checkUrlForChipId();
+        
+        // 5. Check for existing wallet connection
+        await checkPersistedConnection();
+        
+    } catch (error) {
+        console.error('Boot sequence failed:', error);
+        updateStatus('System initialization failed - please refresh');
+    }
+});
 
-function updateWalletDisplay() {
-    const connectBtn = document.getElementById('connectWallet');
-    const walletDisplay = document.getElementById('walletAddress');
-    if (connectBtn) connectBtn.style.display = 'none';
-    if (walletDisplay) walletDisplay.textContent = shortenAddress(userAccount);
+function validateRequiredElements() {
+    const required = ['connectWallet', 'mintNFT', 'status', 'walletAddress'];
+    required.forEach(id => {
+        if (!document.getElementById(id)) {
+            console.error(`Critical Error: Missing element #${id}`);
+        }
+    });
 }
 
 /*********************
- *  PROVIDER MANAGEMENT
+ *  PROVIDER MANAGEMENT (COMPLETE)
  *********************/
 async function initializeReadOnlyProvider(retries = 3) {
     for (let i = 0; i < retries; i++) {
@@ -819,8 +856,25 @@ async function switchToInjectedProvider() {
 }
 
 /*********************
- *  WALLET HANDLING
+ *  REVISED WALLET FLOW
  *********************/
+async function checkPersistedConnection() {
+    if (window.ethereum?.isConnected()) {
+        try {
+            await switchToInjectedProvider();
+            const accounts = await web3.eth.getAccounts();
+            if (accounts.length > 0) {
+                userAccount = accounts[0];
+                updateWalletDisplay();
+                await checkIfAdmin();
+                if (chipId) await checkChipStatus();
+            }
+        } catch (error) {
+            console.log('No persisted connection found');
+        }
+    }
+}
+
 async function connectWallet() {
     try {
         if (!window.ethereum) throw new Error('Please install MetaMask');
@@ -841,17 +895,18 @@ async function connectWallet() {
     }
 }
 
-function setupAccountChangeListener() {
-    window.ethereum.on('accountsChanged', (accounts) => {
-        userAccount = accounts[0];
-        contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS); // Re-init contract
-        checkIfAdmin();
-        if (chipId) checkChipStatus();
-    });
+/*********************
+ *  NETWORK HANDLING
+ *********************/
+async function validateNetwork() {
+    const chainId = await web3.eth.getChainId();
+    if (chainId !== BASE_SEPOLIA_CHAIN_ID) {
+        await handleNetworkSwitch();
+    }
 }
 
 /*********************
- *  CHIP HANDLING
+ *  CHIP HANDLING (FULL IMPLEMENTATION)
  *********************/
 async function checkUrlForChipId() {
     try {
@@ -907,69 +962,22 @@ function handleChipError(error) {
 }
 
 /*********************
- *  CORE INITIALIZATION
+ *  MINT FUNCTIONALITY
  *********************/
-document.addEventListener('DOMContentLoaded', async () => {
+async function mintNFT() {
     try {
-        // 1. Initialize read-only provider with retry logic
-        await initializeReadOnlyProvider();
+       // validateMintPreconditions();
         
-        // 2. Setup UI components
-        validateRequiredElements();
-        disableMintButton();
-        hideAdminPanel();
+        updateStatus('Minting...');
+        const receipt = await contract.methods.mintNFT(chipId)
+            .send({ 
+                from: userAccount,
+                gas: 500000 
+            });
         
-        // 3. Set up event listeners
-        setupEventListeners();
-        
-        // 4. Check URL parameters now that contract is ready
-        await checkUrlForChipId();
-        
-        // 5. Check for existing wallet connection
-        await checkPersistedConnection();
-        
+        handleMintSuccess(receipt);
     } catch (error) {
-        console.error('Boot sequence failed:', error);
-        updateStatus('System initialization failed - please refresh');
-    }
-});
-
-function validateRequiredElements() {
-    const required = ['connectWallet', 'mintNFT', 'status', 'walletAddress'];
-    required.forEach(id => {
-        if (!document.getElementById(id)) {
-            console.error(`Critical Error: Missing element #${id}`);
-        }
-    });
-}
-
-/*********************
- *  NETWORK HANDLING
- *********************/
-async function validateNetwork() {
-    const chainId = await web3.eth.getChainId();
-    if (chainId !== BASE_SEPOLIA_CHAIN_ID) {
-        await handleNetworkSwitch();
-    }
-}
-
-/*********************
- *  REVISED WALLET FLOW
- *********************/
-async function checkPersistedConnection() {
-    if (window.ethereum?.isConnected()) {
-        try {
-            await switchToInjectedProvider();
-            const accounts = await web3.eth.getAccounts();
-            if (accounts.length > 0) {
-                userAccount = accounts[0];
-                updateWalletDisplay();
-                await checkIfAdmin();
-                if (chipId) await checkChipStatus();
-            }
-        } catch (error) {
-            console.log('No persisted connection found');
-        }
+        handleMintError(error);
     }
 }
 
@@ -985,6 +993,44 @@ async function checkIfAdmin() {
         console.error('Admin check failed:', error);
         isAdmin = false;
     }
+}
+
+/*********************
+ *  UI FUNCTIONS (MOVED UP)
+ *********************/
+function updateChipDisplay(chipId) {
+    const chipDisplay = document.getElementById('chipIdDisplay');
+    const userSection = document.getElementById('userSection');
+    
+    if (chipDisplay) {
+        chipDisplay.textContent = chipId;
+    }
+    if (userSection) {
+        userSection.style.display = 'block';
+    }
+    
+    const adminPanel = document.getElementById('adminPanel');
+    if (adminPanel) {
+        adminPanel.style.display = 'block';
+    }
+}
+
+function setupEventListeners() {
+    document.getElementById('connectWallet').addEventListener('click', connectWallet);
+    document.getElementById('mintNFT').addEventListener('click', mintNFT);
+    
+    // Add null check for admin elements
+    const registerBtn = document.getElementById('registerChip');
+    if (registerBtn) {
+        registerBtn.addEventListener('click', registerChip);
+    }
+}
+
+function updateWalletDisplay() {
+    const connectBtn = document.getElementById('connectWallet');
+    const walletDisplay = document.getElementById('walletAddress');
+    if (connectBtn) connectBtn.style.display = 'none';
+    if (walletDisplay) walletDisplay.textContent = shortenAddress(userAccount);
 }
 
 function toggleAdminPanel() {
@@ -1147,6 +1193,12 @@ function handleConnectionError(error) {
     enableConnectButton();
 }
 
+function handleChipError(error) {
+    console.error('Chip check failed:', error);
+    updateStatus('Chip error: ' + error.message);
+    disableMintButton();
+}
+
 function handleAlreadyMinted(tokenId) {
     (async () => {
         try {
@@ -1160,6 +1212,11 @@ function handleAlreadyMinted(tokenId) {
     })();
 }
 
+function handleValidChip() {
+    enableMintButton();
+    updateStatus('Ready to mint!');
+}
+
 function handleMintSuccess(receipt) {
     console.log('Mint successful:', receipt);
     updateStatus('NFT Minted!');
@@ -1170,6 +1227,20 @@ function handleMintError(error) {
     console.error('Mint failed:', error);
     updateStatus('Mint error: ' + error.message);
     enableMintButton();
+}
+
+function hideAdminPanel() {
+    const adminPanel = document.getElementById('adminPanel');
+    if (adminPanel) adminPanel.style.display = 'none';
+}
+
+function setupAccountChangeListener() {
+    window.ethereum.on('accountsChanged', (accounts) => {
+        userAccount = accounts[0];
+        contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS); // Re-init contract
+        checkIfAdmin();
+        if (chipId) checkChipStatus();
+    });
 }
 
 /*********************
