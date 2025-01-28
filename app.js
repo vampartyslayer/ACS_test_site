@@ -918,6 +918,17 @@ async function checkChipStatus() {
     }
 }
 
+function handleValidChip() {
+    enableMintButton();
+    updateStatus('Ready to mint!');
+}
+
+function handleChipError(error) {
+    console.error('Chip check failed:', error);
+    updateStatus('Chip error: ' + error.message);
+    disableMintButton();
+}
+
 /*********************
  *  MINT FUNCTIONALITY
  *********************/
