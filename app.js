@@ -779,8 +779,22 @@ async function initWeb3() {
 }
 
 function initContract() {
-    contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
-    console.log('[Contract] Methods verified:', Object.keys(contract.methods));
+    try {
+        contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
+        
+        // Verify essential methods exist
+        if (!contract.methods.mintNFT) {
+            throw new Error('Contract ABI missing mintNFT method');
+        }
+        if (!contract.methods.owner) {
+            throw new Error('Contract ABI missing owner method');
+        }
+        
+        console.log('[Contract] Methods verified');
+    } catch (error) {
+        console.error('Contract initialization failed:', error);
+        throw error;
+    }
 }
 
 /*********************
@@ -908,8 +922,13 @@ function shortenAddress(address) {
  *********************/
 async function mintNFT() {
     try {
-        if (!contract?.methods?.mintNFT) {
-            throw new Error('Contract not initialized');
+        // Add contract verification
+        if (!contract || !contract.methods) {
+            throw new Error('Contract not connected');
+        }
+        
+        if (!contract.methods.mintNFT) {
+            throw new Error('Mint method not found in contract');
         }
         
         if (!chipId) {
@@ -920,7 +939,7 @@ async function mintNFT() {
         const receipt = await contract.methods.mintNFT(chipId)
             .send({ 
                 from: userAccount,
-                gas: 300000 // Adjust gas limit as needed
+                gas: 500000 // Increased gas limit
             });
         
         console.log('Mint successful:', receipt);
@@ -1171,16 +1190,20 @@ async function connectWallet() {
     try {
         if (!window.ethereum) throw new Error('Please install MetaMask');
         
-        // Initialize connection
+        // Initialize Web3
         web3 = new Web3(window.ethereum);
-        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        
+        // Request accounts first
+        const accounts = await window.ethereum.request({ 
+            method: 'eth_requestAccounts' 
+        });
         userAccount = accounts[0];
         
-        // Network validation
-        await validateNetwork();
-        
-        // Initialize contract
+        // Initialize contract before network check
         contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
+        
+        // Then validate network
+        await validateNetwork();
         
         // Update UI
         const connectBtn = document.getElementById('connectWallet');
@@ -1188,20 +1211,13 @@ async function connectWallet() {
         if (connectBtn) connectBtn.style.display = 'none';
         if (walletDisplay) walletDisplay.textContent = shortenAddress(userAccount);
         
-        // Process chip ID AFTER contract initialization
-        if (chipId) {
-            await checkChipStatus();
+        // Verify contract methods
+        if (!contract.methods) {
+            throw new Error('Contract methods not loaded');
         }
         
-        // After successful connection
-        await checkIfAdmin();
-        
-        // Add account change listener
-        window.ethereum.on('accountsChanged', async (accounts) => {
-            userAccount = accounts[0];
-            await checkIfAdmin();
-            if (chipId) checkChipStatus();
-        });
+        // Now check chip status
+        if (chipId) await checkChipStatus();
         
     } catch (error) {
         console.error('Connection failed:', error);
