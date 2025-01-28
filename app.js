@@ -934,22 +934,29 @@ function handleChipError(error) {
 }
 
 /*********************
- *  MINT FUNCTIONALITY
+ *  MINT HANDLING (REVISED)
  *********************/
 async function mintNFT() {
     try {
-       // validateMintPreconditions();
+        disableMintButton();
+        updateStatus('Minting in progress...');
         
-        updateStatus('Minting...');
+        const accounts = await web3.eth.getAccounts();
+        const gas = await contract.methods.mintNFT(chipId)
+            .estimateGas({ from: accounts[0] });
+            
         const receipt = await contract.methods.mintNFT(chipId)
-            .send({ 
-                from: userAccount,
-                gas: 500000 
+            .send({
+                from: accounts[0],
+                gas: Math.floor(gas * 1.5) // Add 50% buffer
             });
-        
+            
         handleMintSuccess(receipt);
     } catch (error) {
         handleMintError(error);
+        if (await checkChipStatus()) {
+            enableMintButton();
+        }
     }
 }
 
@@ -1180,13 +1187,15 @@ function handleValidChip() {
 
 function handleMintSuccess(receipt) {
     console.log('Mint successful:', receipt);
-    updateStatus('NFT Minted!');
+    updateStatus('NFT Minted! View on explorer');
     disableMintButton();
+    // Optional: Add link to transaction
+    // window.open(`https://sepolia.basescan.org/tx/${receipt.transactionHash}`);
 }
 
 function handleMintError(error) {
     console.error('Mint failed:', error);
-    updateStatus('Mint error: ' + error.message);
+    updateStatus(`Mint error: ${error.message}`);
     enableMintButton();
 }
 
