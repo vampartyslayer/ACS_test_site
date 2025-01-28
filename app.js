@@ -753,39 +753,7 @@ let isInitialized = false;
 let isAdmin = false;
 
 /*********************
- *  UI FUNCTIONS 
- *********************/
-function updateWalletDisplay() {
-    const connectBtn = document.getElementById('connectWallet');
-    const walletDisplay = document.getElementById('walletAddress');
-    if (connectBtn) connectBtn.style.display = 'none';
-    if (walletDisplay) walletDisplay.textContent = shortenAddress(userAccount);
-}
-
-function hideAdminPanel() {
-    const adminPanel = document.getElementById('adminPanel');
-    if (adminPanel) adminPanel.style.display = 'none';
-}
-
-function updateChipDisplay(chipId) {
-    const chipDisplay = document.getElementById('chipIdDisplay');
-    const userSection = document.getElementById('userSection');
-    
-    if (chipDisplay) {
-        chipDisplay.textContent = chipId;
-    }
-    if (userSection) {
-        userSection.style.display = 'block';
-    }
-    
-    const adminPanel = document.getElementById('adminPanel');
-    if (adminPanel) {
-        adminPanel.style.display = 'block';
-    }
-}
-
-/*********************
- *  CORE INITIALIZATION
+ *  CORE INITIALIZATION (FINAL)
  *********************/
 document.addEventListener('DOMContentLoaded', async () => {
     try {
