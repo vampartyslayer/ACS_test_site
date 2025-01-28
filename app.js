@@ -752,48 +752,71 @@ let isInitialized = false;
 let isAdmin = false;
 
 /*********************
- *  CORE FUNCTIONS
+ *  CORE INITIALIZATION
  *********************/
-async function init() {
-    try {
-        await initWeb3();
-        await handleChipIdFromURL();
-        setupEventListeners();
-        await checkIfAdmin();
-    } catch (error) {
-        console.error('[Init] Critical initialization error:', error);
-        updateStatus(`Initialization failed: ${error.message}`);
-    }
-}
-
-async function initWeb3() {
-    if (!window.ethereum) throw new Error('Please install MetaMask');
+document.addEventListener('DOMContentLoaded', () => {
+    // 1. Validate DOM elements first
+    validateRequiredElements();
     
-    web3 = new Web3(window.ethereum);
-    await window.ethereum.request({ method: 'eth_requestAccounts' });
-    userAccount = (await web3.eth.getAccounts())[0];
+    // 2. Initialize UI state
+    disableMintButton();
+    hideAdminPanel();
     
-    await validateNetwork();
-    initContract();
+    // 3. Set up event listeners
+    setupEventListeners();
+    
+    // 4. Check URL parameters (no contract interaction yet)
     checkUrlForChipId();
+});
+
+function validateRequiredElements() {
+    const required = ['connectWallet', 'mintNFT', 'status', 'walletAddress'];
+    required.forEach(id => {
+        if (!document.getElementById(id)) {
+            console.error(`Critical Error: Missing element #${id}`);
+        }
+    });
 }
 
-function initContract() {
+/*********************
+ *  WALLET CONNECTION
+ *********************/
+async function connectWallet() {
     try {
+        // 1. Validate Ethereum provider
+        if (!window.ethereum) throw new Error('Please install MetaMask');
+        
+        // 2. Initialize Web3
+        web3 = new Web3(window.ethereum);
+        
+        // 3. Request accounts
+        const accounts = await window.ethereum.request({ 
+            method: 'eth_requestAccounts' 
+        });
+        userAccount = accounts[0];
+        
+        // 4. Initialize contract
         contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
         
-        // Verify essential methods exist
-        if (!contract.methods.mintNFT) {
-            throw new Error('Contract ABI missing mintNFT method');
-        }
-        if (!contract.methods.owner) {
-            throw new Error('Contract ABI missing owner method');
+        // 5. Validate network
+        await validateNetwork();
+        
+        // 6. Update UI
+        updateWalletDisplay();
+        
+        // 7. Check admin status
+        await checkIfAdmin();
+        
+        // 8. Process chip ID (now that contract is ready)
+        if (chipId) {
+            await checkChipStatus();
         }
         
-        console.log('[Contract] Methods verified');
+        // 9. Set up account change listener
+        setupAccountChangeListener();
+        
     } catch (error) {
-        console.error('Contract initialization failed:', error);
-        throw error;
+        handleConnectionError(error);
     }
 }
 
@@ -803,38 +826,8 @@ function initContract() {
 async function validateNetwork() {
     const chainId = await web3.eth.getChainId();
     if (chainId !== BASE_SEPOLIA_CHAIN_ID) {
-        await switchToBaseSepolia();
+        await handleNetworkSwitch();
     }
-}
-
-async function switchToBaseSepolia() {
-    try {
-        await window.ethereum.request({
-            method: 'wallet_switchEthereumChain',
-            params: [{ chainId: '0x14CC4' }]
-        });
-    } catch (error) {
-        if (error.code === 4902) {
-            await addBaseSepoliaNetwork();
-        }
-    }
-}
-
-async function addBaseSepoliaNetwork() {
-    await window.ethereum.request({
-        method: 'wallet_addEthereumChain',
-        params: [{
-            chainId: '0x14CC4',
-            chainName: 'Base Sepolia',
-            nativeCurrency: {
-                name: 'Ether',
-                symbol: 'ETH',
-                decimals: 18
-            },
-            rpcUrls: ['https://sepolia.base.org'],
-            blockExplorerUrls: ['https://sepolia-explorer.base.org']
-        }]
-    });
 }
 
 /*********************
@@ -843,16 +836,12 @@ async function addBaseSepoliaNetwork() {
 function checkUrlForChipId() {
     const urlParams = new URLSearchParams(window.location.search);
     chipId = urlParams.get('chipId');
-    const display = document.getElementById('chipIdDisplay');
-    
-    if (chipId && display) {
-        display.textContent = chipId;
-        if (userAccount && contract) checkChipStatus();
-    }
+    updateChipDisplay();
 }
 
 async function checkChipStatus() {
     try {
+        // Contract guard clause
         if (!contract?.methods?.chipToTokenId) {
             throw new Error('Contract not initialized');
         }
@@ -861,17 +850,46 @@ async function checkChipStatus() {
         const isMinted = await contract.methods.tokenIdMinted(tokenId).call();
         
         if (isMinted) {
-            const owner = await contract.methods.ownerOf(tokenId).call();
-            updateStatus(`Already claimed by ${shortenAddress(owner)}`);
-            disableMintButton();
+            handleAlreadyMinted(tokenId);
         } else {
-            enableMintButton();
-            updateStatus('Ready to mint!');
+            handleValidChip();
         }
     } catch (error) {
-        console.error('Chip check failed:', error);
-        updateStatus('Chip error: ' + error.message);
-        disableMintButton();
+        handleChipError(error);
+    }
+}
+
+/*********************
+ *  MINT FUNCTIONALITY
+ *********************/
+async function mintNFT() {
+    try {
+        validateMintPreconditions();
+        
+        updateStatus('Minting...');
+        const receipt = await contract.methods.mintNFT(chipId)
+            .send({ 
+                from: userAccount,
+                gas: 500000 
+            });
+        
+        handleMintSuccess(receipt);
+    } catch (error) {
+        handleMintError(error);
+    }
+}
+
+/*********************
+ *  ADMIN FEATURES
+ *********************/
+async function checkIfAdmin() {
+    try {
+        const owner = await contract.methods.owner().call();
+        isAdmin = (userAccount.toLowerCase() === owner.toLowerCase());
+        toggleAdminPanel();
+    } catch (error) {
+        console.error('Admin check failed:', error);
+        isAdmin = false;
     }
 }
 
@@ -879,15 +897,21 @@ async function checkChipStatus() {
  *  UI FUNCTIONS
  *********************/
 function setupEventListeners() {
-    const connectBtn = document.getElementById('connectWallet');
-    const mintBtn = document.getElementById('mintNFT');
-    
-    if (connectBtn) connectBtn.addEventListener('click', connectWallet);
-    if (mintBtn) mintBtn.addEventListener('click', mintNFT);
-    
-    // Admin controls
+    document.getElementById('connectWallet').addEventListener('click', connectWallet);
+    document.getElementById('mintNFT').addEventListener('click', mintNFT);
     document.getElementById('registerChip')?.addEventListener('click', registerChip);
-    document.getElementById('updateTokenURI')?.addEventListener('click', updateTokenURI);
+}
+
+function updateWalletDisplay() {
+    const connectBtn = document.getElementById('connectWallet');
+    const walletDisplay = document.getElementById('walletAddress');
+    if (connectBtn) connectBtn.style.display = 'none';
+    if (walletDisplay) walletDisplay.textContent = shortenAddress(userAccount);
+}
+
+function toggleAdminPanel() {
+    const adminPanel = document.getElementById('adminPanel');
+    if (adminPanel) adminPanel.style.display = isAdmin ? 'block' : 'none';
 }
 
 function updateStatus(message) {
@@ -915,137 +939,6 @@ function disableMintButton() {
 
 function shortenAddress(address) {
     return address ? `${address.slice(0, 6)}...${address.slice(-4)}` : '';
-}
-
-/*********************
- *  MINT FUNCTION
- *********************/
-async function mintNFT() {
-    try {
-        // Add contract verification
-        if (!contract || !contract.methods) {
-            throw new Error('Contract not connected');
-        }
-        
-        if (!contract.methods.mintNFT) {
-            throw new Error('Mint method not found in contract');
-        }
-        
-        if (!chipId) {
-            throw new Error('No chip ID detected');
-        }
-        
-        updateStatus('Minting...');
-        const receipt = await contract.methods.mintNFT(chipId)
-            .send({ 
-                from: userAccount,
-                gas: 500000 // Increased gas limit
-            });
-        
-        console.log('Mint successful:', receipt);
-        updateStatus('NFT Minted!');
-        disableMintButton();
-        
-    } catch (error) {
-        console.error('Mint failed:', error);
-        updateStatus('Mint error: ' + error.message);
-        enableMintButton();
-    }
-}
-
-/*********************
- *  INITIALIZATION
- *********************/
-document.addEventListener('DOMContentLoaded', () => {
-    // Validate required elements
-    const requiredElements = ['connectWallet', 'mintNFT', 'status', 'walletAddress'];
-    requiredElements.forEach(id => {
-        const el = document.getElementById(id);
-        if (!el) console.error(`CRITICAL: Missing element #${id}`);
-    });
-    
-    disableMintButton();
-    setupEventListeners();
-    
-    // Check URL but don't process until connection
-    const urlParams = new URLSearchParams(window.location.search);
-    chipId = urlParams.get('chipId');
-    const display = document.getElementById('chipIdDisplay');
-    if (chipId && display) display.textContent = chipId;
-});
-
-// Add loading state management
-let isCheckingAdmin = false;
-
-// Add this function to handle URL parameters
-function checkUrlForChipId() {
-    try {
-        const urlParams = new URLSearchParams(window.location.search);
-        chipId = urlParams.get('chipId');
-        
-        if (chipId) {
-            console.log('[URL] Detected chip ID:', chipId);
-            handleChipId();
-        }
-    } catch (error) {
-        console.error('[URL] Error parsing chip ID:', error);
-    }
-}
-
-// Update the handleChipId function
-async function handleChipId() {
-    try {
-        console.log('[Chip] Handling chip ID:', chipId);
-        
-        if (!chipId) {
-            console.log('[Chip] No chip ID available');
-            document.getElementById('invitationTitle').textContent = 'YOU WERE NOT INVITED';
-            updateStatus('You have not tapped in');
-            return;
-        }
-
-        const tokenId = await contract.methods.chipToTokenId(chipId).call();
-        console.log('[Chip] Resolved token ID:', tokenId);
-        
-        // Rest of your existing handleChipId logic...
-
-    } catch (error) {
-        console.error('[Chip] Handling error:', error);
-        updateStatus('Error processing chip: ' + error.message);
-    }
-}
-
-// const ADMIN_ADDRESS = '0x1705280ae174a96bac66d3b10caee15a19c61eba';
-async function checkIfAdmin() {
-    try {
-        if (!contract?.methods?.owner) return;
-        
-        const owner = await contract.methods.owner().call();
-        isAdmin = (userAccount.toLowerCase() === owner.toLowerCase());
-        
-        const adminPanel = document.getElementById('adminPanel');
-        if (adminPanel) {
-            adminPanel.style.display = isAdmin ? 'block' : 'none';
-        }
-        
-    } catch (error) {
-        console.error('Admin check failed:', error);
-        isAdmin = false;
-    }
-}
-
-// New helper function for admin features
-function setupAdminFeatures() {
-    // Clear existing interval
-    if (window.chipsInterval) clearInterval(window.chipsInterval);
-    
-    // Initial update
-    updateChipsTable();
-    
-    // Periodic refresh (every 30 seconds)
-    window.chipsInterval = setInterval(() => {
-        updateChipsTable();
-    }, 30000);
 }
 
 async function registerChip() {
@@ -1095,14 +988,12 @@ async function handleChipIdFromURL() {
     }
 }
 
-// Add this validation check
 function validateContract() {
     if (!contract?.methods) {
         throw new Error('Contract methods not available');
     }
 }
 
-// Modified getContract with validation
 async function getContract() {
     if (!isInitialized) {
         await initWeb3();
@@ -1183,44 +1074,52 @@ async function checkConnection() {
     }
 }
 
-// Run in browser console after init
 contract.methods.owner().call().then(console.log)
 
-async function connectWallet() {
-    try {
-        if (!window.ethereum) throw new Error('Please install MetaMask');
-        
-        // Initialize Web3
-        web3 = new Web3(window.ethereum);
-        
-        // Request accounts first
-        const accounts = await window.ethereum.request({ 
-            method: 'eth_requestAccounts' 
-        });
+function handleConnectionError(error) {
+    console.error('Connection failed:', error);
+    updateStatus(`Connection error: ${error.message}`);
+    enableConnectButton();
+}
+
+function handleChipError(error) {
+    console.error('Chip check failed:', error);
+    updateStatus('Chip error: ' + error.message);
+    disableMintButton();
+}
+
+function handleAlreadyMinted(tokenId) {
+    const owner = await contract.methods.ownerOf(tokenId).call();
+    updateStatus(`Already claimed by ${shortenAddress(owner)}`);
+    disableMintButton();
+}
+
+function handleValidChip() {
+    enableMintButton();
+    updateStatus('Ready to mint!');
+}
+
+function handleMintSuccess(receipt) {
+    console.log('Mint successful:', receipt);
+    updateStatus('NFT Minted!');
+    disableMintButton();
+}
+
+function handleMintError(error) {
+    console.error('Mint failed:', error);
+    updateStatus('Mint error: ' + error.message);
+    enableMintButton();
+}
+
+function hideAdminPanel() {
+    const adminPanel = document.getElementById('adminPanel');
+    if (adminPanel) adminPanel.style.display = 'none';
+}
+
+function setupAccountChangeListener() {
+    window.ethereum.on('accountsChanged', (accounts) => {
         userAccount = accounts[0];
-        
-        // Initialize contract before network check
-        contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
-        
-        // Then validate network
-        await validateNetwork();
-        
-        // Update UI
-        const connectBtn = document.getElementById('connectWallet');
-        const walletDisplay = document.getElementById('walletAddress');
-        if (connectBtn) connectBtn.style.display = 'none';
-        if (walletDisplay) walletDisplay.textContent = shortenAddress(userAccount);
-        
-        // Verify contract methods
-        if (!contract.methods) {
-            throw new Error('Contract methods not loaded');
-        }
-        
-        // Now check chip status
-        if (chipId) await checkChipStatus();
-        
-    } catch (error) {
-        console.error('Connection failed:', error);
-        updateStatus(`Connection error: ${error.message}`);
-    }
+        checkIfAdmin();
+        if (chipId) checkChipStatus();
+    });
 }
