@@ -753,25 +753,31 @@ let isInitialized = false;
 let isAdmin = false;
 
 /*********************
- *  CORE INITIALIZATION
+ *  CORE INITIALIZATION (FINAL)
  *********************/
 document.addEventListener('DOMContentLoaded', async () => {
-    // 1. Initialize read-only provider first
-    await initializeReadOnlyProvider();
-    
-    // 2. Setup UI components
-    validateRequiredElements();
-    disableMintButton();
-    hideAdminPanel();
-    
-    // 3. Set up event listeners
-    setupEventListeners();
-    
-    // 4. Check URL parameters now that contract is ready
-    checkUrlForChipId();
-    
-    // 5. Check for existing wallet connection
-    checkPersistedConnection();
+    try {
+        // 1. Initialize read-only provider with retry logic
+        await initializeReadOnlyProvider();
+        
+        // 2. Setup UI components
+        validateRequiredElements();
+        disableMintButton();
+        hideAdminPanel();
+        
+        // 3. Set up event listeners
+        setupEventListeners();
+        
+        // 4. Check URL parameters now that contract is ready
+        await checkUrlForChipId();
+        
+        // 5. Check for existing wallet connection
+        await checkPersistedConnection();
+        
+    } catch (error) {
+        console.error('Boot sequence failed:', error);
+        updateStatus('System initialization failed - please refresh');
+    }
 });
 
 function validateRequiredElements() {
@@ -784,15 +790,24 @@ function validateRequiredElements() {
 }
 
 /*********************
- *  PROVIDER MANAGEMENT
+ *  PROVIDER MANAGEMENT (COMPLETE)
  *********************/
-async function initializeReadOnlyProvider() {
-    try {
-        web3 = new Web3(new Web3.providers.HttpProvider(BASE_SEPOLIA_RPC));
-        contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
-        console.log('Initialized read-only provider');
-    } catch (error) {
-        console.error('Read-only provider init failed:', error);
+async function initializeReadOnlyProvider(retries = 3) {
+    for (let i = 0; i < retries; i++) {
+        try {
+            web3 = new Web3(new Web3.providers.HttpProvider(BASE_SEPOLIA_RPC));
+            contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
+            
+            // Validate contract connection
+            await contract.methods.totalSupply().call();
+            
+            console.log('Read-only provider initialized');
+            return;
+        } catch (error) {
+            console.error(`Read-only init attempt ${i+1}/${retries} failed:`, error);
+            if (i === retries - 1) throw error;
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
     }
 }
 
@@ -859,19 +874,31 @@ async function validateNetwork() {
 }
 
 /*********************
- *  CHIP HANDLING (HOISTED FIRST)
+ *  CHIP HANDLING (FULL IMPLEMENTATION)
  *********************/
-function updateChipDisplay(chipId) {
-    const chipDisplay = document.getElementById('chipIdDisplay');
-    const adminPanel = document.getElementById('adminPanel');
-    
-    if (chipDisplay) chipDisplay.textContent = `Linked Chip: ${chipId}`;
-    if (adminPanel) adminPanel.style.display = 'block';
+async function checkUrlForChipId() {
+    try {
+        const urlParams = new URLSearchParams(window.location.search);
+        chipId = urlParams.get('chipId');
+        
+        if (chipId) {
+            console.log('[Chip] URL parameter detected:', chipId);
+            updateChipDisplay(chipId);
+            await checkChipStatus();
+        } else {
+            console.log('[Chip] No chip ID in URL');
+            updateStatus('Scan a chip to begin');
+        }
+    } catch (error) {
+        console.error('URL parameter handling failed:', error);
+        updateStatus('Error processing chip ID: ' + error.message);
+    }
 }
 
 async function checkChipStatus() {
     try {
-        if (!contract?.methods.chipToTokenId) {
+        if (!contract?.methods?.chipToTokenId) {
+            console.warn('Contract methods missing, reinitializing...');
             await initializeReadOnlyProvider();
         }
         
@@ -887,6 +914,7 @@ async function checkChipStatus() {
         }
     } catch (error) {
         handleChipError(error);
+        throw error;
     }
 }
 
@@ -1012,20 +1040,6 @@ async function updateTokenURI() {
 /*********************
  *  URL PARAM HANDLING (RENAMED FROM handleChipIdFromURL)
  *********************/
-function checkUrlForChipId() {
-    const urlParams = new URLSearchParams(window.location.search);
-    chipId = urlParams.get('chipId');
-    
-    if (chipId) {
-        console.log('[Chip] URL parameter detected:', chipId);
-        updateChipDisplay(chipId);
-        checkChipStatus();
-    } else {
-        console.log('[Chip] No chip ID in URL');
-        updateStatus('Scan a chip to begin');
-    }
-}
-
 function validateContract() {
     if (!contract?.methods) {
         throw new Error('Contract methods not available');
