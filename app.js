@@ -906,7 +906,12 @@ async function checkIfAdmin() {
 function setupEventListeners() {
     document.getElementById('connectWallet').addEventListener('click', connectWallet);
     document.getElementById('mintNFT').addEventListener('click', mintNFT);
-    document.getElementById('registerChip')?.addEventListener('click', registerChip);
+    
+    // Add null check for admin elements
+    const registerBtn = document.getElementById('registerChip');
+    if (registerBtn) {
+        registerBtn.addEventListener('click', registerChip);
+    }
 }
 
 function updateWalletDisplay() {
@@ -966,13 +971,11 @@ async function registerChip() {
 
 async function updateTokenURI() {
     try {
-        const tokenId = prompt('Enter token ID:');
         const newURI = prompt('Enter new URI:');
-        
-        if (!tokenId || !newURI) return;
+        if (!newURI) return;
         
         updateStatus('Updating URI...');
-        await contract.methods.setTokenURI(tokenId, newURI)
+        await contract.methods.setTokenURI(newURI)
             .send({ from: userAccount });
             
         updateStatus('URI updated successfully!');
@@ -1082,8 +1085,6 @@ async function checkConnection() {
     }
 }
 
-contract.methods.owner().call().then(console.log)
-
 function handleConnectionError(error) {
     console.error('Connection failed:', error);
     updateStatus(`Connection error: ${error.message}`);
@@ -1097,9 +1098,16 @@ function handleChipError(error) {
 }
 
 function handleAlreadyMinted(tokenId) {
-    const owner = await contract.methods.ownerOf(tokenId).call();
-    updateStatus(`Already claimed by ${shortenAddress(owner)}`);
-    disableMintButton();
+    (async () => {
+        try {
+            const owner = await contract.methods.ownerOf(tokenId).call();
+            updateStatus(`Already claimed by ${shortenAddress(owner)}`);
+            disableMintButton();
+        } catch (error) {
+            console.error('Owner lookup failed:', error);
+            updateStatus('Already minted - owner unknown');
+        }
+    })();
 }
 
 function handleValidChip() {
@@ -1131,4 +1139,21 @@ function setupAccountChangeListener() {
         checkIfAdmin();
         if (chipId) checkChipStatus();
     });
+}
+
+/*********************
+ *  WEB3 INITIALIZATION
+ *********************/
+async function initWeb3() {
+    if (window.ethereum) {
+        web3 = new Web3(window.ethereum);
+        try {
+            await window.ethereum.enable();
+            isInitialized = true;
+        } catch (error) {
+            console.error('User denied account access');
+        }
+    } else {
+        console.error('No Ethereum provider detected');
+    }
 }
