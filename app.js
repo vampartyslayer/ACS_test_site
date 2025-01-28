@@ -753,7 +753,27 @@ let isInitialized = false;
 let isAdmin = false;
 
 /*********************
- *  CORE INITIALIZATION (FINAL)
+ *  UI FUNCTIONS (MOVED UP)
+ *********************/
+function updateChipDisplay(chipId) {
+    const chipDisplay = document.getElementById('chipIdDisplay');
+    const userSection = document.getElementById('userSection');
+    
+    if (chipDisplay) {
+        chipDisplay.textContent = chipId;
+    }
+    if (userSection) {
+        userSection.style.display = 'block';
+    }
+    
+    const adminPanel = document.getElementById('adminPanel');
+    if (adminPanel) {
+        adminPanel.style.display = 'block';
+    }
+}
+
+/*********************
+ *  CORE INITIALIZATION
  *********************/
 document.addEventListener('DOMContentLoaded', async () => {
     try {
