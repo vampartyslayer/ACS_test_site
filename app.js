@@ -953,7 +953,7 @@ async function checkIfAdmin() {
 }
 
 /*********************
- *  UI FUNCTIONS
+ *  UI FUNCTIONS (UPDATED)
  *********************/
 function setupEventListeners() {
     document.getElementById('connectWallet').addEventListener('click', connectWallet);
@@ -1197,5 +1197,26 @@ async function initWeb3() {
         }
     } else {
         console.error('No Ethereum provider detected');
+    }
+}
+
+/*********************
+ *  UI FUNCTIONS (ADDED)
+ *********************/
+function updateChipDisplay(chipId) {
+    const chipDisplay = document.getElementById('chipIdDisplay');
+    const userSection = document.getElementById('userSection');
+    
+    if (chipDisplay) {
+        chipDisplay.textContent = chipId;
+    }
+    if (userSection) {
+        userSection.style.display = 'block';
+    }
+    
+    // Show admin panel if available
+    const adminPanel = document.getElementById('adminPanel');
+    if (adminPanel) {
+        adminPanel.style.display = 'block';
     }
 }
