@@ -839,7 +839,7 @@ function checkUrlForChipId() {
 async function checkChipStatus() {
     try {
         if (!contract?.methods?.chipToTokenId) {
-            throw new Error('Contract methods not available');
+            throw new Error('Contract not initialized');
         }
         
         const tokenId = await contract.methods.chipToTokenId(chipId).call();
@@ -926,7 +926,7 @@ async function mintNFT() {
  *********************/
 document.addEventListener('DOMContentLoaded', () => {
     // Validate required elements
-    const requiredElements = ['connectWallet', 'mintNFT', 'status'];
+    const requiredElements = ['connectWallet', 'mintNFT', 'status', 'walletAddress'];
     requiredElements.forEach(id => {
         const el = document.getElementById(id);
         if (!el) console.error(`CRITICAL: Missing element #${id}`);
@@ -934,7 +934,12 @@ document.addEventListener('DOMContentLoaded', () => {
     
     disableMintButton();
     setupEventListeners();
-    checkUrlForChipId();
+    
+    // Check URL but don't process until connection
+    const urlParams = new URLSearchParams(window.location.search);
+    chipId = urlParams.get('chipId');
+    const display = document.getElementById('chipIdDisplay');
+    if (chipId && display) display.textContent = chipId;
 });
 
 // Add loading state management
@@ -1159,10 +1164,33 @@ async function checkConnection() {
 contract.methods.owner().call().then(console.log)
 
 async function connectWallet() {
-    // ... existing connection code ...
-    
-    // Move chip check here after contract init
-    if (chipId) {
-        await checkChipStatus();
+    try {
+        if (!window.ethereum) throw new Error('Please install MetaMask');
+        
+        // Initialize connection
+        web3 = new Web3(window.ethereum);
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        userAccount = accounts[0];
+        
+        // Network validation
+        await validateNetwork();
+        
+        // Initialize contract
+        contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
+        
+        // Update UI
+        const connectBtn = document.getElementById('connectWallet');
+        const walletDisplay = document.getElementById('walletAddress');
+        if (connectBtn) connectBtn.style.display = 'none';
+        if (walletDisplay) walletDisplay.textContent = shortenAddress(userAccount);
+        
+        // Process chip ID AFTER contract initialization
+        if (chipId) {
+            await checkChipStatus();
+        }
+        
+    } catch (error) {
+        console.error('Connection failed:', error);
+        updateStatus(`Connection error: ${error.message}`);
     }
 }
