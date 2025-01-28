@@ -3,6 +3,7 @@
  *********************/
 const CONTRACT_ADDRESS = '0xfaf77c99E8E7C704b37449DCD08cb3555887cC94';
 const BASE_SEPOLIA_CHAIN_ID = 84532;
+const BASE_SEPOLIA_RPC = 'https://sepolia.base.org';
 const CONTRACT_ABI = [
 	{
 		"inputs": [
@@ -754,17 +755,23 @@ let isAdmin = false;
 /*********************
  *  CORE INITIALIZATION
  *********************/
-document.addEventListener('DOMContentLoaded', () => {
-    // 1. Initialize UI first
+document.addEventListener('DOMContentLoaded', async () => {
+    // 1. Initialize read-only provider first
+    await initializeReadOnlyProvider();
+    
+    // 2. Setup UI components
     validateRequiredElements();
     disableMintButton();
     hideAdminPanel();
     
-    // 2. Set up event listeners before any user interaction
+    // 3. Set up event listeners
     setupEventListeners();
     
-    // 3. Check URL parameters after initial setup
+    // 4. Check URL parameters now that contract is ready
     checkUrlForChipId();
+    
+    // 5. Check for existing wallet connection
+    checkPersistedConnection();
 });
 
 function validateRequiredElements() {
@@ -777,46 +784,65 @@ function validateRequiredElements() {
 }
 
 /*********************
- *  WALLET CONNECTION
+ *  PROVIDER MANAGEMENT
  *********************/
+async function initializeReadOnlyProvider() {
+    try {
+        web3 = new Web3(new Web3.providers.HttpProvider(BASE_SEPOLIA_RPC));
+        contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
+        console.log('Initialized read-only provider');
+    } catch (error) {
+        console.error('Read-only provider init failed:', error);
+    }
+}
+
+async function switchToInjectedProvider() {
+    try {
+        web3 = new Web3(window.ethereum);
+        contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
+        await validateNetwork();
+        console.log('Switched to injected provider');
+    } catch (error) {
+        console.error('Provider switch failed:', error);
+        throw error;
+    }
+}
+
+/*********************
+ *  REVISED WALLET FLOW
+ *********************/
+async function checkPersistedConnection() {
+    if (window.ethereum?.isConnected()) {
+        try {
+            await switchToInjectedProvider();
+            const accounts = await web3.eth.getAccounts();
+            if (accounts.length > 0) {
+                userAccount = accounts[0];
+                updateWalletDisplay();
+                await checkIfAdmin();
+                if (chipId) await checkChipStatus();
+            }
+        } catch (error) {
+            console.log('No persisted connection found');
+        }
+    }
+}
+
 async function connectWallet() {
     try {
         if (!window.ethereum) throw new Error('Please install MetaMask');
         
-        // 1. Initialize Web3 first
-        web3 = new Web3(window.ethereum);
-        
-        // 2. Initialize contract before accounts
-        contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
-        
-        // 3. Then request accounts
+        await switchToInjectedProvider();
         const accounts = await window.ethereum.request({ 
             method: 'eth_requestAccounts' 
         });
+        
         userAccount = accounts[0];
-        
-        // 4. Validate network
-        await validateNetwork();
-        
-        // 5. Verify contract methods exist
-        if (!contract?.methods) {
-            throw new Error('Contract methods not loaded');
-        }
-        
-        // 6. Update UI
         updateWalletDisplay();
-        
-        // 7. Check admin status
         await checkIfAdmin();
+        if (chipId) await checkChipStatus();
         
-        // 8. Process chip ID (now that contract is ready)
-        if (chipId) {
-            await checkChipStatus();
-        }
-        
-        // 9. Set up account change listener
         setupAccountChangeListener();
-        
     } catch (error) {
         handleConnectionError(error);
     }
@@ -845,19 +871,17 @@ function updateChipDisplay(chipId) {
 
 async function checkChipStatus() {
     try {
-        if (!contract || !contract.methods) {
-            throw new Error('Contract not initialized');
-        }
-        
-        if (!contract.methods.chipToTokenId) {
-            throw new Error('Contract ABI missing required methods');
+        if (!contract?.methods.chipToTokenId) {
+            await initializeReadOnlyProvider();
         }
         
         const tokenId = await contract.methods.chipToTokenId(chipId).call();
         const isMinted = await contract.methods.tokenIdMinted(tokenId).call();
         
         if (isMinted) {
-            handleAlreadyMinted(tokenId);
+            const owner = await contract.methods.ownerOf(tokenId).call();
+            updateStatus(`Already claimed by ${shortenAddress(owner)}`);
+            disableMintButton();
         } else {
             handleValidChip();
         }
